@@ -271,6 +271,7 @@
 
 <header>Schedl Munkaruha Debrecen</header>
 
+<!-- BELÉPÉS -->
 <div id="login-screen">
   <h2>Rendszer Belépés</h2>
   <label for="login-password">Add meg a jelszót:</label>
@@ -279,6 +280,7 @@
   <p id="login-error" class="hidden">Hibás jelszó!</p>
 </div>
 
+<!-- APP -->
 <div id="main-app" class="hidden">
 
   <div class="tabs">
@@ -291,6 +293,7 @@
     <div class="tab" id="backup-tab" onclick="showTab('backup')">Backup</div>
   </div>
 
+  <!-- BEVÉTEL -->
   <div id="income" class="tab-content">
     <h3>Bevétel rögzítése</h3>
     <div class="filters-row">
@@ -315,6 +318,7 @@
     </div>
   </div>
 
+  <!-- KIADÁS -->
   <div id="expense" class="tab-content hidden">
     <h3>Kiadás rögzítése</h3>
     <div class="filters-row">
@@ -340,6 +344,7 @@
     </div>
   </div>
 
+  <!-- KÉSZLET -->
   <div id="inventory" class="tab-content hidden">
     <h3>Teljes Készlet</h3>
     <div class="filters-row">
@@ -360,6 +365,7 @@
     </div>
   </div>
 
+  <!-- TERMÉKEK -->
   <div id="products" class="tab-content hidden">
     <h3>Terméktörzs kezelése</h3>
     <div class="filters-row">
@@ -385,6 +391,7 @@
     </div>
   </div>
 
+  <!-- DOLGOZÓK -->
   <div id="employees" class="tab-content hidden">
     <h3>Dolgozók kezelése</h3>
     <div class="filters-row">
@@ -404,6 +411,7 @@
     </div>
   </div>
 
+  <!-- MOZGÁSOK -->
   <div id="movements" class="tab-content hidden">
     <h3>Mozgások naplója / Bizonylat</h3>
     <div class="filters-row">
@@ -431,6 +439,7 @@
     </div>
   </div>
 
+  <!-- BACKUP -->
   <div id="backup" class="tab-content hidden">
     <h3>Biztonsági mentés (Admin)</h3>
     <p>A rendszer az adatokat a böngészőben tárolja. Rendszeresen készíts mentést!</p>
@@ -445,8 +454,10 @@
 
 </div>
 
+<!-- NYOMTATÁSI TERÜLET (REJTETT) -->
 <div id="print-area"></div>
 
+<!-- XLSX KÖNYVTÁR -->
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
 <script>
