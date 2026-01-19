@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Schedl Munkaruha - Nyilvántartás</title>
+  <title>Schedl Munkaruha - Nyilvántartás (FIFO)</title>
   <style>
     :root {
       --bg: #f3f4f6;
@@ -121,6 +121,8 @@
       font-weight: 600;
       position: relative;
       padding-right: 20px; /* hely a szűrő nyílnak */
+      cursor: default;
+      user-select: none;
     }
     tr.low-stock { background: #ffe4e6; }
     
@@ -216,7 +218,6 @@
         background: white;
         color: black;
       }
-      /* Nyomtatási stílusok */
       .print-header {
         text-align: center;
         margin-bottom: 30px;
@@ -269,7 +270,7 @@
 </head>
 <body>
 
-<header>Schedl Munkaruha Debrecen</header>
+<header>Schedl Munkaruha - Nyilvántartás (FIFO)</header>
 
 <!-- BELÉPÉS -->
 <div id="login-screen">
@@ -287,6 +288,7 @@
     <div class="tab active" onclick="showTab('income')">Bevétel</div>
     <div class="tab" onclick="showTab('expense')">Kiadás</div>
     <div class="tab" onclick="showTab('inventory')">Készlet</div>
+    <div class="tab" onclick="showTab('receipts')">Számlák (Raktáron)</div>
     <div class="tab" onclick="showTab('products')">Termékek</div>
     <div class="tab" onclick="showTab('employees')">Dolgozók</div>
     <div class="tab" onclick="showTab('movements')">Mozgások / Bizonylat</div>
@@ -295,14 +297,15 @@
 
   <!-- BEVÉTEL -->
   <div id="income" class="tab-content">
-    <h3>Bevétel rögzítése</h3>
+    <h3>Bevétel rögzítése (Számla szerint)</h3>
     <div class="filters-row">
+      <input id="income-receipt" type="text" placeholder="Számla száma" style="width:150px; border-color:var(--primary);">
       <select id="income-type" style="min-width:150px"></select>
       <select id="income-size" style="min-width:100px"></select>
       <input id="income-qty" type="number" min="1" value="1" style="width:80px;" placeholder="Db">
       <button onclick="addIncome()">+ Hozzáad</button>
     </div>
-    <h4>Aktuális készlet (csak tájékoztató)</h4>
+    <h4>Aktuális készlet (Összesített)</h4>
     <div class="table-container">
       <table id="income-inventory-table">
         <thead>
@@ -320,7 +323,7 @@
 
   <!-- KIADÁS -->
   <div id="expense" class="tab-content hidden">
-    <h3>Kiadás rögzítése</h3>
+    <h3>Kiadás rögzítése (FIFO: Legrégebbi számláról)</h3>
     <div class="filters-row">
       <select id="employee-select" style="min-width:180px"></select>
       <select id="expense-type" style="min-width:150px"></select>
@@ -346,7 +349,7 @@
 
   <!-- KÉSZLET -->
   <div id="inventory" class="tab-content hidden">
-    <h3>Teljes Készlet</h3>
+    <h3>Teljes Készlet (Összesített)</h3>
     <div class="filters-row">
       <button onclick="exportInventory()">Exportálás Excelbe</button>
     </div>
@@ -358,6 +361,29 @@
             <th data-col="size">Méret <button class="filter-btn" onclick="openFilter('inventory-table','size',event)">▼</button></th>
             <th data-col="qty">Darab</th>
             <th data-col="min">Minimum</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SZÁMLÁK (ÚJ FÜL) -->
+  <div id="receipts" class="tab-content hidden">
+    <h3>Raktáron lévő tételek számlák szerint</h3>
+    <p>Itt látható, hogy melyik számláról mennyi darab van még <b>raktáron</b> (ami még nem lett kiadva).</p>
+    <div class="filters-row">
+        <!-- Ide jöhetne export gomb, ha kell -->
+    </div>
+    <div class="table-container">
+      <table id="receipts-table">
+        <thead>
+          <tr>
+            <th data-col="receipt">Számla száma <button class="filter-btn" onclick="openFilter('receipts-table','receipt',event)">▼</button></th>
+            <th data-col="type">Típus <button class="filter-btn" onclick="openFilter('receipts-table','type',event)">▼</button></th>
+            <th data-col="size">Méret <button class="filter-btn" onclick="openFilter('receipts-table','size',event)">▼</button></th>
+            <th data-col="qty">Maradék db</th>
+            <th data-col="date">Beérkezés ideje</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -420,7 +446,6 @@
       <button onclick="exportMovements()" class="btn-outline" style="background:white; border:1px solid #ccc; color:#333;">Excel Export</button>
       <button onclick="printSlip()" style="background:#4b5563;">🖨️ Bizonylat nyomtatása</button>
     </div>
-    <p style="font-size:12px; color:#666;">Tipp: Szűrd le a listát egy dolgozóra a bizonylat nyomtatása előtt!</p>
     <div class="table-container">
       <table id="movements-table">
         <thead>
@@ -431,7 +456,8 @@
             <th data-col="item">Termék <button class="filter-btn" onclick="openFilter('movements-table','item',event)">▼</button></th>
             <th data-col="size">Méret <button class="filter-btn" onclick="openFilter('movements-table','size',event)">▼</button></th>
             <th data-col="qty">Menny.</th>
-            <th>Törlés</th>
+            <th data-col="receipt">Számla (Eredet)</th>
+            <!-- Törlés gomb kivéve, mert a FIFO rendszerben a visszamenőleges törlés bezavarhatja a készletet -->
           </tr>
         </thead>
         <tbody></tbody>
@@ -466,9 +492,14 @@
   const ADMIN_PASSWORD = 'Schedl@12345!';
 
   // --- ADATOK ---
+  // items: A termékdefiníciók (Típus, Méret, MinStock). A QTY itt már csak "gyorsnézet", a batches-ből számolódik újra.
   let items = [];
   let employees = [];
   let movements = [];
+  // ÚJ: batches tárolja a konkrét bevételezéseket
+  // { id, type, size, receipt, qty, originalQty, date }
+  let batches = []; 
+  
   let currentUser = { role: 'user' };
 
   const lastRendered = {
@@ -477,7 +508,8 @@
     'expense-inventory-table': [],
     'base-products-table': [],
     'employees-table': [],
-    'movements-table': []
+    'movements-table': [],
+    'receipts-table': []
   };
 
   const tableFilters = {};
@@ -538,21 +570,23 @@
       case 'products': renderBaseProducts(); updateSelects(); break;
       case 'employees': renderEmployees(); break;
       case 'movements': renderMovements(); break;
+      case 'receipts': renderReceipts(); break;
     }
   }
 
   function init() {
     autoLoadData();
     updateSelects();
-    // Első renderelések, hogy a lastRendered feltöltődjön
     renderInventoryTable('inventory-table');
-    renderMovements();
   }
 
   // --- ADATKEZELÉS ---
   function autoSaveData() {
-    localStorage.setItem('raktarData', JSON.stringify({ items, employees, movements }));
+    // A QTY mezőt az items-ben frissítjük a batches alapján, hogy konzisztens legyen
+    recalcItemsQtyFromBatches();
+    localStorage.setItem('raktarData', JSON.stringify({ items, employees, movements, batches }));
   }
+
   function autoLoadData() {
     const s = localStorage.getItem('raktarData');
     if (s) {
@@ -564,8 +598,45 @@
           if (!m.id) m.id = 'mov_' + Math.random().toString(36).slice(2);
           return m;
         });
-      } catch(e) {}
+        batches = d.batches || [];
+
+        // MIGRÁCIÓ: Ha van item, de nincs batch (régi verzióról frissítés)
+        if (batches.length === 0 && items.some(i => i.qty > 0)) {
+           console.log("Migráció: Meglévő készlet konvertálása 'Kezdeti Készlet' batch-ekké.");
+           items.forEach(i => {
+             if (i.qty > 0) {
+               batches.push({
+                 id: 'batch_init_' + Math.random().toString(36).slice(2),
+                 type: i.type,
+                 size: i.size,
+                 receipt: 'Kezdeti Készlet',
+                 qty: i.qty,
+                 originalQty: i.qty,
+                 date: new Date().toISOString() // Vagy egy régebbi fix dátum
+               });
+             }
+           });
+        }
+
+        recalcItemsQtyFromBatches();
+
+      } catch(e) { console.error("Hiba a betöltéskor", e); }
     }
+  }
+
+  function recalcItemsQtyFromBatches() {
+    // Nullázzuk a készletet az items tömbben
+    items.forEach(i => i.qty = 0);
+    // Összeadjuk a batch-ek alapján
+    batches.forEach(b => {
+      const it = items.find(i => i.type === b.type && i.size === b.size);
+      if (it) {
+        it.qty += b.qty;
+      } else {
+        // Ha olyan batch van, amihez nincs item definíció (ritka hiba), létrehozzuk
+        // items.push({ type: b.type, size: b.size, qty: b.qty, minStock: 0 });
+      }
+    });
   }
 
   function updateSelects() {
@@ -638,13 +709,31 @@
     const type = document.getElementById('income-type').value;
     const size = document.getElementById('income-size').value;
     const qty = parseInt(document.getElementById('income-qty').value) || 0;
+    const receipt = document.getElementById('income-receipt').value.trim();
     
-    if (!type || !size || qty <= 0) { alert('Tölts ki minden mezőt!'); return; }
+    if (!type || !size || qty <= 0) { alert('Tölts ki minden mezőt (Típus, Méret, Db)!'); return; }
+    if (!receipt) { alert('Kérlek add meg a Számla számát!'); return; }
     
-    const ex = items.find(i => i.type === type && i.size === size);
-    if (ex) ex.qty += qty;
-    else items.push({ type, size, qty, minStock: 0 });
+    // 1. Megkeressük a definíciót
+    let ex = items.find(i => i.type === type && i.size === size);
+    if (!ex) {
+      // Ha nincs, létrehozzuk (bár elvileg a selectből választ)
+      items.push({ type, size, qty: 0, minStock: 0 });
+      ex = items[items.length-1];
+    }
 
+    // 2. Létrehozunk egy új Batch-et
+    batches.push({
+      id: 'batch_' + Date.now(),
+      type: type,
+      size: size,
+      receipt: receipt,
+      qty: qty,
+      originalQty: qty,
+      date: new Date().toISOString()
+    });
+
+    // 3. Mozgás rögzítése
     movements.push({
       id: 'mov_' + Date.now(),
       date: new Date().toISOString(),
@@ -652,40 +741,75 @@
       item: type,
       size: size,
       qty: qty,
-      employee: null
+      employee: null,
+      receipt: receipt // Itt egyetlen számla van
     });
     
     alert('Bevétel rögzítve!');
+    autoSaveData(); // Ez frissíti az items.qty-t is
     renderInventoryTable('income-inventory-table');
-    autoSaveData();
+    document.getElementById('income-qty').value = "1";
+    document.getElementById('income-receipt').value = ""; // Opcionális: töröljük-e a számlaszámot? Inkább igen.
   }
 
   function addExpense() {
     const type = document.getElementById('expense-type').value;
     const size = document.getElementById('expense-size').value;
-    const qty = parseInt(document.getElementById('expense-qty').value) || 0;
+    let qtyNeeded = parseInt(document.getElementById('expense-qty').value) || 0;
     const emp = document.getElementById('employee-select').value;
 
-    if (!type || !size || !emp || qty <= 0) { alert('Tölts ki minden mezőt!'); return; }
+    if (!type || !size || !emp || qtyNeeded <= 0) { alert('Tölts ki minden mezőt!'); return; }
 
-    const ex = items.find(i => i.type === type && i.size === size);
-    if (!ex || ex.qty < qty) { alert(`Nincs elég készlet! Jelenleg: ${ex ? ex.qty : 0} db`); return; }
-    
-    ex.qty -= qty;
+    // Ellenőrzés: Van-e elég összesen?
+    const totalStock = items.find(i => i.type === type && i.size === size)?.qty || 0;
+    if (totalStock < qtyNeeded) {
+      alert(`Nincs elég készlet! Jelenleg: ${totalStock} db`);
+      return;
+    }
 
+    // FIFO Logika
+    // 1. Keressük meg az ehhez tartozó batch-eket, ahol qty > 0
+    // 2. Rendezzük dátum szerint növekvőbe (legrégebbi elől)
+    let availableBatches = batches
+       .filter(b => b.type === type && b.size === size && b.qty > 0)
+       .sort((a,b) => new Date(a.date) - new Date(b.date));
+
+    let usedReceipts = []; // Ide gyűjtjük, melyik számlákról vettük le
+    let remainingToTake = qtyNeeded;
+
+    for (let batch of availableBatches) {
+      if (remainingToTake <= 0) break;
+
+      let takeFromBatch = Math.min(batch.qty, remainingToTake);
+      
+      batch.qty -= takeFromBatch;
+      remainingToTake -= takeFromBatch;
+      
+      usedReceipts.push(`${batch.receipt} (${takeFromBatch}db)`);
+    }
+
+    if (remainingToTake > 0) {
+      // Ez elvileg nem futhat le, ha a totalStock ellenőrzés jó volt
+      alert("Hiba: Adatbázis inkonzisztencia (Total vs Batches). Kérlek frissíts!");
+      return;
+    }
+
+    // Mozgás rögzítése
     movements.push({
       id: 'mov_' + Date.now(),
       date: new Date().toISOString(),
       type: 'Kiadás',
       item: type,
       size: size,
-      qty: qty,
-      employee: emp
+      qty: qtyNeeded,
+      employee: emp,
+      receipt: usedReceipts.join(', ') // Lista a felhasznált számlákról
     });
 
     alert('Kiadás rögzítve!');
-    renderInventoryTable('expense-inventory-table');
     autoSaveData();
+    renderInventoryTable('expense-inventory-table');
+    document.getElementById('expense-qty').value = "1";
   }
 
   // --- RENDERELÉS ---
@@ -711,6 +835,40 @@
           `;
           tbody.appendChild(tr);
         });
+  }
+
+  function renderReceipts() {
+    const tbody = document.querySelector('#receipts-table tbody');
+    tbody.innerHTML = '';
+    
+    // Csak azokat a batcheket mutatjuk, ahol van még készlet
+    let rows = batches.filter(b => b.qty > 0);
+    
+    rows = applyDataFilters('receipts-table', rows, {
+      'receipt': r => r.receipt,
+      'type': r => r.type,
+      'size': r => r.size
+    });
+    
+    lastRendered['receipts-table'] = rows;
+
+    if(!rows.length) { tbody.innerHTML = '<tr><td colspan="5">Nincs raktáron lévő tétel.</td></tr>'; return; }
+
+    // Rendezés: Típus, Méret, Dátum
+    rows.sort((a,b) => a.type.localeCompare(b.type) || sizeRank(a.size)-sizeRank(b.size) || new Date(a.date)-new Date(b.date));
+
+    rows.forEach(r => {
+      const dateStr = new Date(r.date).toLocaleDateString();
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${r.receipt}</td>
+        <td>${r.type}</td>
+        <td>${r.size}</td>
+        <td><strong>${r.qty}</strong> / ${r.originalQty}</td>
+        <td>${dateStr}</td>
+      `;
+      tbody.appendChild(tr);
+    });
   }
 
   function renderBaseProducts() {
@@ -780,7 +938,7 @@
         <td>${m.item}</td>
         <td>${m.size || ''}</td>
         <td>${m.qty}</td>
-        <td><button class="danger-btn" onclick="deleteMovement('${m.id}')">X</button></td>
+        <td style="font-size:12px; color:#555;">${m.receipt || '-'}</td>
       `;
       tbody.appendChild(tr);
     });
@@ -789,7 +947,7 @@
   // --- TÖRLÉSEK ---
   function deleteItem(t, s) { if(confirm('Törlöd?')) { items=items.filter(i=>!(i.type===t && (i.size||'')===(s||''))); renderBaseProducts(); autoSaveData(); } }
   function deleteEmployee(n) { if(confirm('Törlöd?')) { employees=employees.filter(e=>e.name!==n); renderEmployees(); autoSaveData(); } }
-  function deleteMovement(id) { if(confirm('Törlöd a mozgást?')) { movements=movements.filter(m=>m.id!==id); renderMovements(); autoSaveData(); } }
+  // deleteMovement kivéve a biztonság kedvéért a FIFO miatt, de a kódban benne maradhat inaktívan.
   function updateMinStock(t, s, v) { const i=items.find(x=>x.type===t && x.size===s); if(i){ i.minStock=Number(v); autoSaveData(); } }
 
   // --- EXPORT & PRINT ---
@@ -806,14 +964,14 @@
     if(!rows.length) return alert('Nincs adat');
     const ws = XLSX.utils.json_to_sheet(rows.map(m=>({
       'Dátum': new Date(m.date).toLocaleString(),
-      'Dolgozó': m.employee||'', 'Típus': m.type, 'Termék': m.item, 'Méret': m.size, 'Db': m.qty
+      'Dolgozó': m.employee||'', 'Típus': m.type, 'Termék': m.item, 'Méret': m.size, 'Db': m.qty, 'Számla': m.receipt || ''
     })));
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Mozgasok");
     XLSX.writeFile(wb, "Mozgasok.xlsx");
   }
 
   function manualBackup() {
-    const blob = new Blob([JSON.stringify({items,employees,movements})], {type:'application/json'});
+    const blob = new Blob([JSON.stringify({items,employees,movements,batches})], {type:'application/json'});
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
     a.download = `backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
   }
@@ -825,7 +983,23 @@
     r.onload = e => {
       try {
         const d = JSON.parse(e.target.result);
-        items=d.items||[]; employees=d.employees||[]; movements=d.movements||[];
+        items=d.items||[]; employees=d.employees||[]; movements=d.movements||[]; batches=d.batches||[];
+        if(!d.batches && items.length > 0) {
+            // Ha régi backupot töltenek vissza, futtatjuk a migrációt
+            items.forEach(i => {
+             if (i.qty > 0) {
+               batches.push({
+                 id: 'batch_restored_' + Math.random().toString(36).slice(2),
+                 type: i.type,
+                 size: i.size,
+                 receipt: 'Visszatöltött (Ismeretlen)',
+                 qty: i.qty,
+                 originalQty: i.qty,
+                 date: new Date().toISOString()
+               });
+             }
+           });
+        }
         init(); alert('Visszatöltve!'); autoSaveData();
       } catch(err){ alert('Hiba!'); }
     };
@@ -840,12 +1014,10 @@
       return;
     }
 
-    // Adatok begyűjtése
     const employeesInList = [...new Set(rows.map(r => r.employee).filter(Boolean))];
     const employeeName = employeesInList.length === 1 ? employeesInList[0] : (employeesInList.length > 1 ? 'Vegyes lista' : '-');
     const today = new Date().toLocaleDateString();
 
-    // HTML generálás a nyomtatási területre
     const printDiv = document.getElementById('print-area');
     
     let rowsHtml = '';
@@ -898,7 +1070,6 @@
       </div>
     `;
 
-    // Nyomtatás indítása
     window.print();
   }
 
@@ -917,6 +1088,11 @@
 
     // Értékek kinyerése
     if(tableId.includes('inventory') || tableId==='base-products-table'){
+        if(colKey==='type') vals = [...new Set(rows.map(r=>r.type))];
+        if(colKey==='size') vals = [...new Set(rows.map(r=>r.size))];
+    }
+    if(tableId==='receipts-table') {
+        if(colKey==='receipt') vals = [...new Set(rows.map(r=>r.receipt))];
         if(colKey==='type') vals = [...new Set(rows.map(r=>r.type))];
         if(colKey==='size') vals = [...new Set(rows.map(r=>r.size))];
     }
@@ -949,7 +1125,6 @@
     const act = document.createElement('div');
     act.className = 'filter-actions';
     
-    // Mind törlése gomb (ÚJ)
     const btnNone = document.createElement('button');
     btnNone.className = 'btn-secondary';
     btnNone.innerHTML = '☐ Mind töröl';
@@ -997,6 +1172,7 @@
     if(tid==='base-products-table') renderBaseProducts();
     if(tid==='employees-table') renderEmployees();
     if(tid==='movements-table') renderMovements();
+    if(tid==='receipts-table') renderReceipts();
   }
 
   function applyDataFilters(tid, rows, mapFns) {
