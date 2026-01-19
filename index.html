@@ -457,7 +457,6 @@
             <th data-col="size">Méret <button class="filter-btn" onclick="openFilter('movements-table','size',event)">▼</button></th>
             <th data-col="qty">Menny.</th>
             <th data-col="receipt">Számla (Eredet)</th>
-            <!-- Törlés gomb kivéve, mert a FIFO rendszerben a visszamenőleges törlés bezavarhatja a készletet -->
           </tr>
         </thead>
         <tbody></tbody>
@@ -492,12 +491,9 @@
   const ADMIN_PASSWORD = 'Schedl@12345!';
 
   // --- ADATOK ---
-  // items: A termékdefiníciók (Típus, Méret, MinStock). A QTY itt már csak "gyorsnézet", a batches-ből számolódik újra.
   let items = [];
   let employees = [];
   let movements = [];
-  // ÚJ: batches tárolja a konkrét bevételezéseket
-  // { id, type, size, receipt, qty, originalQty, date }
   let batches = []; 
   
   let currentUser = { role: 'user' };
@@ -582,7 +578,6 @@
 
   // --- ADATKEZELÉS ---
   function autoSaveData() {
-    // A QTY mezőt az items-ben frissítjük a batches alapján, hogy konzisztens legyen
     recalcItemsQtyFromBatches();
     localStorage.setItem('raktarData', JSON.stringify({ items, employees, movements, batches }));
   }
@@ -600,8 +595,8 @@
         });
         batches = d.batches || [];
 
-        // MIGRÁCIÓ: Ha van item, de nincs batch (régi verzióról frissítés)
-        if (batches.length === 0 && items.some(i => i.qty > 0)) {
+        // MIGRÁCIÓ
+        if ((!d.batches || d.batches.length === 0) && items.some(i => i.qty > 0)) {
            console.log("Migráció: Meglévő készlet konvertálása 'Kezdeti Készlet' batch-ekké.");
            items.forEach(i => {
              if (i.qty > 0) {
@@ -612,7 +607,7 @@
                  receipt: 'Kezdeti Készlet',
                  qty: i.qty,
                  originalQty: i.qty,
-                 date: new Date().toISOString() // Vagy egy régebbi fix dátum
+                 date: new Date().toISOString()
                });
              }
            });
@@ -625,16 +620,11 @@
   }
 
   function recalcItemsQtyFromBatches() {
-    // Nullázzuk a készletet az items tömbben
     items.forEach(i => i.qty = 0);
-    // Összeadjuk a batch-ek alapján
     batches.forEach(b => {
       const it = items.find(i => i.type === b.type && i.size === b.size);
       if (it) {
         it.qty += b.qty;
-      } else {
-        // Ha olyan batch van, amihez nincs item definíció (ritka hiba), létrehozzuk
-        // items.push({ type: b.type, size: b.size, qty: b.qty, minStock: 0 });
       }
     });
   }
@@ -714,15 +704,12 @@
     if (!type || !size || qty <= 0) { alert('Tölts ki minden mezőt (Típus, Méret, Db)!'); return; }
     if (!receipt) { alert('Kérlek add meg a Számla számát!'); return; }
     
-    // 1. Megkeressük a definíciót
     let ex = items.find(i => i.type === type && i.size === size);
     if (!ex) {
-      // Ha nincs, létrehozzuk (bár elvileg a selectből választ)
       items.push({ type, size, qty: 0, minStock: 0 });
       ex = items[items.length-1];
     }
 
-    // 2. Létrehozunk egy új Batch-et
     batches.push({
       id: 'batch_' + Date.now(),
       type: type,
@@ -733,7 +720,6 @@
       date: new Date().toISOString()
     });
 
-    // 3. Mozgás rögzítése
     movements.push({
       id: 'mov_' + Date.now(),
       date: new Date().toISOString(),
@@ -742,14 +728,14 @@
       size: size,
       qty: qty,
       employee: null,
-      receipt: receipt // Itt egyetlen számla van
+      receipt: receipt
     });
     
     alert('Bevétel rögzítve!');
-    autoSaveData(); // Ez frissíti az items.qty-t is
+    autoSaveData();
     renderInventoryTable('income-inventory-table');
     document.getElementById('income-qty').value = "1";
-    document.getElementById('income-receipt').value = ""; // Opcionális: töröljük-e a számlaszámot? Inkább igen.
+    document.getElementById('income-receipt').value = ""; 
   }
 
   function addExpense() {
@@ -760,21 +746,17 @@
 
     if (!type || !size || !emp || qtyNeeded <= 0) { alert('Tölts ki minden mezőt!'); return; }
 
-    // Ellenőrzés: Van-e elég összesen?
     const totalStock = items.find(i => i.type === type && i.size === size)?.qty || 0;
     if (totalStock < qtyNeeded) {
       alert(`Nincs elég készlet! Jelenleg: ${totalStock} db`);
       return;
     }
 
-    // FIFO Logika
-    // 1. Keressük meg az ehhez tartozó batch-eket, ahol qty > 0
-    // 2. Rendezzük dátum szerint növekvőbe (legrégebbi elől)
     let availableBatches = batches
        .filter(b => b.type === type && b.size === size && b.qty > 0)
        .sort((a,b) => new Date(a.date) - new Date(b.date));
 
-    let usedReceipts = []; // Ide gyűjtjük, melyik számlákról vettük le
+    let usedReceipts = []; 
     let remainingToTake = qtyNeeded;
 
     for (let batch of availableBatches) {
@@ -788,13 +770,6 @@
       usedReceipts.push(`${batch.receipt} (${takeFromBatch}db)`);
     }
 
-    if (remainingToTake > 0) {
-      // Ez elvileg nem futhat le, ha a totalStock ellenőrzés jó volt
-      alert("Hiba: Adatbázis inkonzisztencia (Total vs Batches). Kérlek frissíts!");
-      return;
-    }
-
-    // Mozgás rögzítése
     movements.push({
       id: 'mov_' + Date.now(),
       date: new Date().toISOString(),
@@ -803,7 +778,7 @@
       size: size,
       qty: qtyNeeded,
       employee: emp,
-      receipt: usedReceipts.join(', ') // Lista a felhasznált számlákról
+      receipt: usedReceipts.join(', ')
     });
 
     alert('Kiadás rögzítve!');
@@ -840,8 +815,6 @@
   function renderReceipts() {
     const tbody = document.querySelector('#receipts-table tbody');
     tbody.innerHTML = '';
-    
-    // Csak azokat a batcheket mutatjuk, ahol van még készlet
     let rows = batches.filter(b => b.qty > 0);
     
     rows = applyDataFilters('receipts-table', rows, {
@@ -854,7 +827,6 @@
 
     if(!rows.length) { tbody.innerHTML = '<tr><td colspan="5">Nincs raktáron lévő tétel.</td></tr>'; return; }
 
-    // Rendezés: Típus, Méret, Dátum
     rows.sort((a,b) => a.type.localeCompare(b.type) || sizeRank(a.size)-sizeRank(b.size) || new Date(a.date)-new Date(b.date));
 
     rows.forEach(r => {
@@ -947,7 +919,6 @@
   // --- TÖRLÉSEK ---
   function deleteItem(t, s) { if(confirm('Törlöd?')) { items=items.filter(i=>!(i.type===t && (i.size||'')===(s||''))); renderBaseProducts(); autoSaveData(); } }
   function deleteEmployee(n) { if(confirm('Törlöd?')) { employees=employees.filter(e=>e.name!==n); renderEmployees(); autoSaveData(); } }
-  // deleteMovement kivéve a biztonság kedvéért a FIFO miatt, de a kódban benne maradhat inaktívan.
   function updateMinStock(t, s, v) { const i=items.find(x=>x.type===t && x.size===s); if(i){ i.minStock=Number(v); autoSaveData(); } }
 
   // --- EXPORT & PRINT ---
@@ -983,10 +954,16 @@
     r.onload = e => {
       try {
         const d = JSON.parse(e.target.result);
-        items=d.items||[]; employees=d.employees||[]; movements=d.movements||[]; batches=d.batches||[];
-        if(!d.batches && items.length > 0) {
-            // Ha régi backupot töltenek vissza, futtatjuk a migrációt
-            items.forEach(i => {
+        
+        // 1. Adatok betöltése
+        items = d.items || [];
+        employees = d.employees || [];
+        movements = d.movements || [];
+        batches = d.batches || [];
+
+        // 2. Migráció
+        if ((!d.batches || d.batches.length === 0) && items.some(i => i.qty > 0)) {
+           items.forEach(i => {
              if (i.qty > 0) {
                batches.push({
                  id: 'batch_restored_' + Math.random().toString(36).slice(2),
@@ -1000,8 +977,16 @@
              }
            });
         }
-        init(); alert('Visszatöltve!'); autoSaveData();
-      } catch(err){ alert('Hiba!'); }
+
+        // 3. Mentés ÉS Frissítés
+        autoSaveData(); 
+        alert('Sikeres visszatöltés! Az oldal újratöltődik.');
+        location.reload(); 
+        
+      } catch(err){ 
+        console.error(err);
+        alert('Hiba a fájl feldolgozásakor!'); 
+      }
     };
     r.readAsText(f);
   }
