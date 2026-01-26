@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Schedl Munkaruha - Nyilvántartás (FIFO)</title>
+  <title>Schedl Munkaruha - Nyilvántartás (FIFO + Törlés)</title>
   <style>
     :root {
       --bg: #f3f4f6;
@@ -132,6 +132,14 @@
       border: 1px solid #fecaca;
     }
     .danger-btn:hover { background: #fecaca; }
+
+    .disabled-btn {
+        background: #e5e7eb;
+        color: #9ca3af;
+        border: 1px solid #d1d5db;
+        cursor: not-allowed;
+    }
+    .disabled-btn:hover { background: #e5e7eb; }
 
     .filters-row {
       display: flex;
@@ -457,6 +465,7 @@
             <th data-col="size">Méret <button class="filter-btn" onclick="openFilter('movements-table','size',event)">▼</button></th>
             <th data-col="qty">Menny.</th>
             <th data-col="receipt">Számla (Eredet)</th>
+            <th>Törlés</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -710,8 +719,9 @@
       ex = items[items.length-1];
     }
 
+    const batchId = 'batch_' + Date.now();
     batches.push({
-      id: 'batch_' + Date.now(),
+      id: batchId,
       type: type,
       size: size,
       receipt: receipt,
@@ -728,7 +738,8 @@
       size: size,
       qty: qty,
       employee: null,
-      receipt: receipt
+      receipt: receipt,
+      batchId: batchId // Kapcsolat a batch-hez (Törléshez kell)
     });
     
     alert('Bevétel rögzítve!');
@@ -757,6 +768,7 @@
        .sort((a,b) => new Date(a.date) - new Date(b.date));
 
     let usedReceipts = []; 
+    let affectedBatches = []; // Ezt mentjük el a törléshez
     let remainingToTake = qtyNeeded;
 
     for (let batch of availableBatches) {
@@ -768,6 +780,7 @@
       remainingToTake -= takeFromBatch;
       
       usedReceipts.push(`${batch.receipt} (${takeFromBatch}db)`);
+      affectedBatches.push({ batchId: batch.id, qty: takeFromBatch });
     }
 
     movements.push({
@@ -778,7 +791,8 @@
       size: size,
       qty: qtyNeeded,
       employee: emp,
-      receipt: usedReceipts.join(', ')
+      receipt: usedReceipts.join(', '),
+      affectedBatches: affectedBatches // Kapcsolat a visszavonáshoz
     });
 
     alert('Kiadás rögzítve!');
@@ -897,12 +911,28 @@
     rows.sort((a,b)=>new Date(b.date)-new Date(a.date));
     lastRendered['movements-table'] = rows;
 
-    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="7">Nincs mozgás</td></tr>'; return; }
+    if (!rows.length) { tbody.innerHTML = '<tr><td colspan="8">Nincs mozgás</td></tr>'; return; }
 
     rows.forEach(m => {
       const d = new Date(m.date);
       const ds = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
       const tr = document.createElement('tr');
+      
+      // Törölhetőség ellenőrzése
+      let canDelete = false;
+      if (m.type === 'Bevétel' && m.batchId) {
+          // Csak akkor törölhető, ha még érintetlen (nem volt belőle kiadás)
+          const b = batches.find(b => b.id === m.batchId);
+          if (b && b.qty === b.originalQty) canDelete = true;
+      } else if (m.type === 'Kiadás' && m.affectedBatches && m.affectedBatches.length > 0) {
+          // Kiadás törölhető, ha megvannak az adatok a visszatöltéshez
+          canDelete = true;
+      }
+
+      const delBtn = canDelete 
+        ? `<button class="danger-btn" onclick="deleteMovement('${m.id}')">X</button>`
+        : `<button class="disabled-btn" title="Régi adat vagy már felhasznált készlet">X</button>`;
+
       tr.innerHTML = `
         <td>${ds}</td>
         <td>${m.employee || '-'}</td>
@@ -911,6 +941,7 @@
         <td>${m.size || ''}</td>
         <td>${m.qty}</td>
         <td style="font-size:12px; color:#555;">${m.receipt || '-'}</td>
+        <td>${delBtn}</td>
       `;
       tbody.appendChild(tr);
     });
@@ -919,6 +950,53 @@
   // --- TÖRLÉSEK ---
   function deleteItem(t, s) { if(confirm('Törlöd?')) { items=items.filter(i=>!(i.type===t && (i.size||'')===(s||''))); renderBaseProducts(); autoSaveData(); } }
   function deleteEmployee(n) { if(confirm('Törlöd?')) { employees=employees.filter(e=>e.name!==n); renderEmployees(); autoSaveData(); } }
+  
+  function deleteMovement(id) {
+      const mIdx = movements.findIndex(m => m.id === id);
+      if (mIdx === -1) return;
+      const m = movements[mIdx];
+
+      if (!confirm('Biztosan törlöd/visszavonod ezt a mozgást?')) return;
+
+      if (m.type === 'Bevétel') {
+          // Ellenőrizzük mégegyszer, hogy nem fogyott-e belőle
+          const bIdx = batches.findIndex(b => b.id === m.batchId);
+          if (bIdx > -1) {
+              if (batches[bIdx].qty !== batches[bIdx].originalQty) {
+                  alert('HIBA: Ebből a bevételből már történt kiadás, nem törölhető!');
+                  return;
+              }
+              // Töröljük a batch-et
+              batches.splice(bIdx, 1);
+          }
+      } else if (m.type === 'Kiadás') {
+          // Visszatöltjük a készletet a megfelelő batch-ekbe
+          if (m.affectedBatches) {
+              m.affectedBatches.forEach(aff => {
+                  const b = batches.find(b => b.id === aff.batchId);
+                  if (b) {
+                      b.qty += aff.qty;
+                  } else {
+                      // Ha valamiért törlődött volna a batch (nem kéne), akkor létrehozunk egy újat a maradéknak?
+                      // Most inkább hagyjuk, ez extrém eset.
+                      console.warn('Nem található batch visszatöltéshez:', aff.batchId);
+                  }
+              });
+          }
+      }
+
+      // Mozgás törlése
+      movements.splice(mIdx, 1);
+      
+      alert('Mozgás törölve/visszavonva.');
+      autoSaveData(); // Újraszámolja az összesített item qty-t
+      renderMovements();
+      // Frissíteni kell a készlet táblázatokat is, mert változhatott
+      renderInventoryTable('income-inventory-table');
+      renderInventoryTable('expense-inventory-table');
+      renderInventoryTable('inventory-table');
+  }
+
   function updateMinStock(t, s, v) { const i=items.find(x=>x.type===t && x.size===s); if(i){ i.minStock=Number(v); autoSaveData(); } }
 
   // --- EXPORT & PRINT ---
