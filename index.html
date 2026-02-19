@@ -4,13 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Schedl Munkaruha - Nyilvántartás (FIFO + Törlés)</title>
-  <pre><code>
-echo "deb http://archive.ubuntu.com/ubuntu/ jammy main restricted universe multiverse" >> /etc/apt/sources.list
-echo "deb http://archive.ubuntu.com/ubuntu/ jammy-updates main restricted universe multiverse" >> /etc/apt/sources.list
-echo "deb http://security.ubuntu.com/ubuntu/ jammy-security main restricted universe multiverse" >> /etc/apt/sources.list
-apt-get update
-apt-get install -y build-essential git dkms linux-headers-$(uname -r)
-</code></pre>
   <style>
     :root {
       --bg: #f3f4f6;
@@ -220,9 +213,34 @@ apt-get install -y build-essential git dkms linux-headers-$(uname -r)
     /* NYOMTATÁS */
     #print-area { display: none; }
 
+    /* IDEIGLENES PARANCS DOBOZ STÍLUSA */
+    #temp-commands {
+      background-color: #1e1e1e;
+      color: #00ff00;
+      font-family: monospace;
+      padding: 15px;
+      margin: 20px auto;
+      max-width: 800px;
+      border-radius: 8px;
+      overflow-x: auto;
+      border: 2px solid #333;
+    }
+    #temp-commands h4 {
+      color: #ffffff;
+      margin-top: 0;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #444;
+      padding-bottom: 5px;
+    }
+    #temp-commands p {
+      margin: 5px 0;
+      white-space: pre-wrap;
+    }
+
     @media print {
       body * { visibility: hidden; }
       #print-area, #print-area * { visibility: visible; }
+      #temp-commands { display: none !important; } /* Ne nyomtassa ki a parancsokat */
       #print-area {
         display: block !important;
         position: absolute;
@@ -286,6 +304,16 @@ apt-get install -y build-essential git dkms linux-headers-$(uname -r)
 <body>
 
 <header>Schedl Munkaruha - Nyilvántartás (FIFO)</header>
+
+<!-- IDEIGLENES PARANCSOK MEGJELENÍTÉSE -->
+<div id="temp-commands">
+  <h4>Ideiglenes Linux parancsok a HP ThinPro Wi-Fi javításához (Root terminálba):</h4>
+  <p>echo "deb http://archive.ubuntu.com/ubuntu/ jammy main restricted universe multiverse" >> /etc/apt/sources.list</p>
+  <p>echo "deb http://archive.ubuntu.com/ubuntu/ jammy-updates main restricted universe multiverse" >> /etc/apt/sources.list</p>
+  <p>echo "deb http://security.ubuntu.com/ubuntu/ jammy-security main restricted universe multiverse" >> /etc/apt/sources.list</p>
+  <p>apt-get update</p>
+  <p>apt-get install -y build-essential git dkms linux-headers-$(uname -r)</p>
+</div>
 
 <!-- BELÉPÉS -->
 <div id="login-screen">
@@ -499,7 +527,7 @@ apt-get install -y build-essential git dkms linux-headers-$(uname -r)
 <div id="print-area"></div>
 
 <!-- XLSX KÖNYVTÁR -->
-<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <script>
   // --- KONFIGURÁCIÓ ---
@@ -555,6 +583,10 @@ apt-get install -y build-essential git dkms linux-headers-$(uname -r)
 
     err.classList.add('hidden');
     document.getElementById('login-screen').classList.add('hidden');
+    
+    // Ideiglenes parancsok elrejtése belépés után (opcionális, de ajánlott)
+    document.getElementById('temp-commands').style.display = 'none';
+
     document.getElementById('main-app').classList.remove('hidden');
 
     if (currentUser.role !== 'admin') {
@@ -984,8 +1016,6 @@ apt-get install -y build-essential git dkms linux-headers-$(uname -r)
                   if (b) {
                       b.qty += aff.qty;
                   } else {
-                      // Ha valamiért törlődött volna a batch (nem kéne), akkor létrehozunk egy újat a maradéknak?
-                      // Most inkább hagyjuk, ez extrém eset.
                       console.warn('Nem található batch visszatöltéshez:', aff.batchId);
                   }
               });
@@ -1263,7 +1293,3 @@ apt-get install -y build-essential git dkms linux-headers-$(uname -r)
 </script>
 </body>
 </html>
-
-
-
-
