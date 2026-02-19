@@ -3,16 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Schedl Munkaruha - Nyilvántartás (FIFO + Törlés)
-  echo "deb http://archive.ubuntu.com/ubuntu/ jammy main restricted universe multiverse" >> /etc/apt/sources.list
-
+  <title>Schedl Munkaruha - Nyilvántartás (FIFO + Törlés)</title>
+  <pre><code>
+echo "deb http://archive.ubuntu.com/ubuntu/ jammy main restricted universe multiverse" >> /etc/apt/sources.list
 echo "deb http://archive.ubuntu.com/ubuntu/ jammy-updates main restricted universe multiverse" >> /etc/apt/sources.list
-
 echo "deb http://security.ubuntu.com/ubuntu/ jammy-security main restricted universe multiverse" >> /etc/apt/sources.list
-
 apt-get update
-
-apt-get install -y build-essential git dkms linux-headers-$(uname -r)</title>
+apt-get install -y build-essential git dkms linux-headers-$(uname -r)
+</code></pre>
   <style>
     :root {
       --bg: #f3f4f6;
@@ -1265,4 +1263,5 @@ apt-get install -y build-essential git dkms linux-headers-$(uname -r)</title>
 </script>
 </body>
 </html>
+
 
