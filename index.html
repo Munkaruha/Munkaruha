@@ -213,34 +213,9 @@
     /* NYOMTATÁS */
     #print-area { display: none; }
 
-    /* IDEIGLENES PARANCS DOBOZ STÍLUSA */
-    #temp-commands {
-      background-color: #1e1e1e;
-      color: #00ff00;
-      font-family: monospace;
-      padding: 15px;
-      margin: 20px auto;
-      max-width: 800px;
-      border-radius: 8px;
-      overflow-x: auto;
-      border: 2px solid #333;
-    }
-    #temp-commands h4 {
-      color: #ffffff;
-      margin-top: 0;
-      margin-bottom: 10px;
-      border-bottom: 1px solid #444;
-      padding-bottom: 5px;
-    }
-    #temp-commands p {
-      margin: 5px 0;
-      white-space: pre-wrap;
-    }
-
     @media print {
       body * { visibility: hidden; }
       #print-area, #print-area * { visibility: visible; }
-      #temp-commands { display: none !important; } /* Ne nyomtassa ki a parancsokat */
       #print-area {
         display: block !important;
         position: absolute;
@@ -304,24 +279,6 @@
 <body>
 
 <header>Schedl Munkaruha - Nyilvántartás (FIFO)</header>
-
-<!-- IDEIGLENES PARANCSOK MEGJELENÍTÉSE -->
-<div id="temp-commands">
-  <h4>Ideiglenes Linux parancsok a HP ThinPro Wi-Fi javításához (Root terminálba):</h4>
-  <p>echo "deb http://archive.ubuntu.com/ubuntu/ jammy main restricted universe multiverse" >> /etc/apt/sources.list</p>
-  <p>echo "deb http://archive.ubuntu.com/ubuntu/ jammy-updates main restricted universe multiverse" >> /etc/apt/sources.list</p>
-  <p>echo "deb http://security.ubuntu.com/ubuntu/ jammy-security main restricted universe multiverse" >> /etc/apt/sources.list</p>
-  <p>apt-get update</p>
-  <p>apt-get install -y build-essential git dkms linux-headers-$(uname -r)</p>
-  <p>git clone https://github.com/morrownr/88x2bu-20210702.git</p>
-  <p>cd 88x2bu-20210702</p>
-  <p>make</p>
-  <p>make install</p>
-  <p>modprobe 88x2bu</p>
-  <p>apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 0E98404D386FA1D9</p>
-  <p>apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6ED0E7B82643E131</p>
-  <p>apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 605C950F06D6C9793</p>
-</div>
 
 <!-- BELÉPÉS -->
 <div id="login-screen">
@@ -591,9 +548,6 @@
 
     err.classList.add('hidden');
     document.getElementById('login-screen').classList.add('hidden');
-    
-    // Ideiglenes parancsok elrejtése belépés után (opcionális, de ajánlott)
-    document.getElementById('temp-commands').style.display = 'none';
 
     document.getElementById('main-app').classList.remove('hidden');
 
@@ -1301,4 +1255,3 @@
 </script>
 </body>
 </html>
-
