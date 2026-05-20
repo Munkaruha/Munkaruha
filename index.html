@@ -1,49 +1,788 @@
-#login-screen { max-width: 380px; margin: 60px auto; background: var(--panel); padding: 24px; border-radius: var(--radius); box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: center; }
-#login-screen h2 { margin-top: 0; color: var(--primary); }
-#login-error { color: var(--danger); margin-top: 10px; font-weight: bold; }
-#login-password { width: 100%; margin: 10px 0; padding: 10px; }
-#login-screen button { width: 100%; padding: 10px; font-size: 16px; }
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Schedl Munkaruha - Nyilvántartás</title>
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --panel: #ffffff;
+      --primary: #0f5fa8;
+      --border: #e5e7eb;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --danger: #b91c1c;
+      --radius: 8px;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; margin: 0; background: var(--bg); color: var(--text); }
+    header { background: var(--panel); border-bottom: 1px solid var(--border); padding: 12px 20px; text-align: center; font-weight: 700; font-size: 18px; color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    button { background: var(--primary); color: #fff; border: none; padding: 6px 14px; border-radius: var(--radius); cursor: pointer; font-size: 14px; transition: background 0.2s; }
+    button:hover { background: #08467c; }
+    input, select { padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; }
+    .hidden { display: none !important; }
 
-.tabs { display: flex; background: var(--panel); border-bottom: 1px solid var(--border); gap: 2px; padding: 0 10px; flex-wrap: wrap; }
-.tab { padding: 12px 16px; cursor: pointer; font-weight: 500; color: var(--muted); border-bottom: 3px solid transparent; transition: all 0.2s; }
-.tab:hover { background: #f9fafb; color: var(--text); }
-.tab.active { color: var(--primary); border-bottom-color: var(--primary); background: #eef4fb; }
-.tab-content { background: var(--panel); margin: 16px; padding: 20px; border-radius: var(--radius); box-shadow: 0 1px 4px rgba(0,0,0,0.04); min-height: 400px; }
-h3 { margin-top: 0; color: var(--primary); border-bottom: 1px solid #eee; padding-bottom: 8px; }
+    #login-screen { max-width: 380px; margin: 60px auto; background: var(--panel); padding: 24px; border-radius: var(--radius); box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: center; }
+    #login-screen h2 { margin-top: 0; color: var(--primary); }
+    #login-error { color: var(--danger); margin-top: 10px; font-weight: bold; }
+    #login-password { width: 100%; margin: 10px 0; padding: 10px; }
+    #login-screen button { width: 100%; padding: 10px; font-size: 16px; }
 
-.table-container { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 10px; }
-th, td { border: 1px solid var(--border); padding: 8px 6px; text-align: center; }
-th { background: #f8fafc; font-weight: 600; position: relative; padding-right: 20px; cursor: default; user-select: none; }
-tr.low-stock { background: #ffe4e6; }
+    .tabs { display: flex; background: var(--panel); border-bottom: 1px solid var(--border); gap: 2px; padding: 0 10px; flex-wrap: wrap; }
+    .tab { padding: 12px 16px; cursor: pointer; font-weight: 500; color: var(--muted); border-bottom: 3px solid transparent; transition: all 0.2s; }
+    .tab:hover { background: #f9fafb; color: var(--text); }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); background: #eef4fb; }
+    .tab-content { background: var(--panel); margin: 16px; padding: 20px; border-radius: var(--radius); box-shadow: 0 1px 4px rgba(0,0,0,0.04); min-height: 400px; }
+    h3 { margin-top: 0; color: var(--primary); border-bottom: 1px solid #eee; padding-bottom: 8px; }
 
-.danger-btn { background: #fee2e2; color: var(--danger); border: 1px solid #fecaca; }
-.danger-btn:hover { background: #fecaca; }
-.disabled-btn { background: #e5e7eb; color: #9ca3af; border: 1px solid #d1d5db; cursor: not-allowed; }
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 10px; }
+    th, td { border: 1px solid var(--border); padding: 8px 6px; text-align: center; }
+    th { background: #f8fafc; font-weight: 600; position: relative; padding-right: 20px; cursor: default; user-select: none; }
+    tr.low-stock { background: #ffe4e6; }
+    
+    .danger-btn { background: #fee2e2; color: var(--danger); border: 1px solid #fecaca; }
+    .danger-btn:hover { background: #fecaca; }
+    .disabled-btn { background: #e5e7eb; color: #9ca3af; border: 1px solid #d1d5db; cursor: not-allowed; }
+    
+    .filters-row { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; background: #f9fafb; padding: 10px; border-radius: var(--radius); border: 1px solid var(--border); }
+    .filter-btn { background: transparent; border: none; cursor: pointer; font-size: 10px; color: #4b5563; position: absolute; right: 2px; top: 50%; transform: translateY(-50%); padding: 4px; border-radius: 4px; }
+    .filter-btn:hover { background: rgba(15,95,168,0.1); }
+    .filter-dropdown { position: absolute; top: 100%; right: 0; background: #ffffff; border: 1px solid #d1d5db; border-radius: 6px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 8px; z-index: 9999; max-height: 250px; overflow-y: auto; min-width: 180px; text-align: left; }
+    .filter-dropdown label { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 4px 0; cursor: pointer; white-space: nowrap; }
+    .filter-actions { display: flex; gap: 5px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; justify-content: space-between; }
+    .filter-actions button { padding: 4px 8px; font-size: 11px; }
+    .btn-secondary { background: #9ca3af; }
+    .btn-outline { background: transparent; color: var(--text); border: 1px solid #d1d5db; }
 
-.filters-row { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; align-items: center; background: #f9fafb; padding: 10px; border-radius: var(--radius); border: 1px solid var(--border); }
-.filter-btn { background: transparent; border: none; cursor: pointer; font-size: 10px; color: #4b5563; position: absolute; right: 2px; top: 50%; transform: translateY(-50%); padding: 4px; border-radius: 4px; }
-.filter-btn:hover { background: rgba(15,95,168,0.1); }
-.filter-dropdown { position: absolute; top: 100%; right: 0; background: #ffffff; border: 1px solid #d1d5db; border-radius: 6px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); padding: 8px; z-index: 9999; max-height: 250px; overflow-y: auto; min-width: 180px; text-align: left; }
-.filter-dropdown label { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 4px 0; cursor: pointer; white-space: nowrap; }
-.filter-actions { display: flex; gap: 5px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; justify-content: space-between; }
-.filter-actions button { padding: 4px 8px; font-size: 11px; }
-.btn-secondary { background: #9ca3af; }
-.btn-outline { background: transparent; color: var(--text); border: 1px solid #d1d5db; }
+    #print-area { display: none; }
+    @media print {
+      body * { visibility: hidden; }
+      #print-area, #print-area * { visibility: visible; }
+      #print-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%; padding: 20px; background: white; color: black; }
+      .print-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 30px; }
+      .print-header h1 { margin: 0; font-size: 24px; font-family: serif; }
+      .print-header p { margin: 5px 0 0 0; font-size: 16px; font-family: sans-serif; color: #333; }
+      .print-meta { display: flex; justify-content: space-between; margin-bottom: 20px; font-family: serif; font-size: 16px; }
+      .print-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
+      .print-table th, .print-table td { border: 1px solid black; padding: 8px; text-align: left; font-size: 14px; font-family: serif; }
+      .print-table th { background: #eee !important; -webkit-print-color-adjust: exact; }
+      .print-footer { display: flex; justify-content: space-between; margin-top: 60px; font-family: serif; }
+      .signature-box { text-align: center; width: 40%; }
+      .signature-line { border-top: 1px solid black; margin-top: 40px; padding-top: 5px; font-weight: bold; }
+    }
+  </style>
+</head>
+<body>
 
-#print-area { display: none; }
-@media print {
-  body * { visibility: hidden; }
-  #print-area, #print-area * { visibility: visible; }
-  #print-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%; padding: 20px; background: white; color: black; }
-  .print-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 30px; }
-  .print-header h1 { margin: 0; font-size: 24px; font-family: serif; }
-  .print-header p { margin: 5px 0 0 0; font-size: 16px; font-family: sans-serif; color: #333; }
-  .print-meta { display: flex; justify-content: space-between; margin-bottom: 20px; font-family: serif; font-size: 16px; }
-  .print-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
-  .print-table th, .print-table td { border: 1px solid black; padding: 8px; text-align: left; font-size: 14px; font-family: serif; }
-  .print-table th { background: #eee !important; -webkit-print-color-adjust: exact; }
-  .print-footer { display: flex; justify-content: space-between; margin-top: 60px; font-family: serif; }
-  .signature-box { text-align: center; width: 40%; }
-  .signature-line { border-top: 1px solid black; margin-top: 40px; padding-top: 5px; font-weight: bold; }
-}
+<header>Schedl Munkaruha - Nyilvántartás</header>
+
+<div id="login-screen">
+  <h2>Rendszer Belépés</h2>
+  <input id="login-password" type="password" placeholder="Jelszó..." onkeypress="if(event.key==='Enter') login()">
+  <button onclick="login()">Belépés</button>
+  <p id="login-error" class="hidden">Hibás jelszó!</p>
+</div>
+
+<div id="main-app" class="hidden">
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('income')">Bevétel</div>
+    <div class="tab" onclick="showTab('expense')">Kiadás</div>
+    <div class="tab" onclick="showTab('inventory')">Készlet</div>
+    <div class="tab" onclick="showTab('receipts')">Számlák (Raktáron)</div>
+    <div class="tab" onclick="showTab('products')">Termékek</div>
+    <div class="tab" onclick="showTab('employees')">Dolgozók</div>
+    <div class="tab" onclick="showTab('movements')">Mozgások / Bizonylat</div>
+    <div class="tab" id="backup-tab" onclick="showTab('backup')">Backup</div>
+  </div>
+
+  <div id="income" class="tab-content">
+    <h3>Bevétel rögzítése (Számla szerint)</h3>
+    <div class="filters-row">
+      <input id="income-receipt" type="text" placeholder="Számla száma" style="width:140px;">
+      <select id="income-type" style="min-width:140px"></select>
+      <select id="income-size" style="min-width:90px"></select>
+      <input id="income-qty" type="number" min="1" value="1" style="width:70px;" placeholder="Db">
+      <input id="income-price" type="number" min="0" style="width:100px;" placeholder="Ár (Ft/db)">
+      <button onclick="addIncome()">+ Hozzáad</button>
+    </div>
+    <h4>Aktuális készlet (Összesített)</h4>
+    <div class="table-container">
+      <table id="income-inventory-table">
+        <thead>
+          <tr>
+            <th data-col="type">Típus</th>
+            <th data-col="size">Méret</th>
+            <th data-col="qty">Darab</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="expense" class="tab-content hidden">
+    <h3>Kiadás rögzítése (FIFO)</h3>
+    <div class="filters-row">
+      <select id="employee-select" style="min-width:180px"></select>
+      <select id="expense-type" style="min-width:150px"></select>
+      <select id="expense-size" style="min-width:100px"></select>
+      <input id="expense-qty" type="number" min="1" value="1" style="width:80px;" placeholder="Db">
+      <button onclick="addExpense()">Kiadás rögzítése</button>
+    </div>
+    <div class="table-container">
+      <table id="expense-inventory-table">
+        <thead>
+          <tr>
+            <th data-col="type">Típus</th>
+            <th data-col="size">Méret</th>
+            <th data-col="qty">Készlet</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="inventory" class="tab-content hidden">
+    <h3>Teljes Készlet (Összesített)</h3>
+    <div class="filters-row">
+      <button onclick="exportInventory()">Exportálás Excelbe</button>
+      <button onclick="exportLeltar()" class="btn-outline" style="background:white; border-color:var(--primary); color:var(--primary); font-weight:bold;">Leltár Export (Árak szerint bontva)</button>
+    </div>
+    <div class="table-container">
+      <table id="inventory-table">
+        <thead>
+          <tr>
+            <th data-col="type">Típus <button class="filter-btn" onclick="openFilter('inventory-table','type',event)">▼</button></th>
+            <th data-col="size">Méret <button class="filter-btn" onclick="openFilter('inventory-table','size',event)">▼</button></th>
+            <th data-col="qty">Darab</th>
+            <th data-col="price">Utolsó Ár (Ft)</th>
+            <th data-col="min">Minimum</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="receipts" class="tab-content hidden">
+    <h3>Raktáron lévő tételek számlák szerint</h3>
+    <p>A sárgával jelölt <b>Ár</b> cellákra kattintva utólag is módosíthatod a korábbi árakat.</p>
+    <div class="table-container">
+      <table id="receipts-table">
+        <thead>
+          <tr>
+            <th data-col="receipt">Számla száma <button class="filter-btn" onclick="openFilter('receipts-table','receipt',event)">▼</button></th>
+            <th data-col="type">Típus <button class="filter-btn" onclick="openFilter('receipts-table','type',event)">▼</button></th>
+            <th data-col="size">Méret <button class="filter-btn" onclick="openFilter('receipts-table','size',event)">▼</button></th>
+            <th data-col="qty">Maradék db</th>
+            <th data-col="price">Ár (Ft) ✏️</th>
+            <th data-col="date">Beérkezés ideje</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="products" class="tab-content hidden">
+    <h3>Terméktörzs kezelése</h3>
+    <div class="filters-row">
+      <input id="new-item-type" placeholder="Új termék neve">
+      <button onclick="addItem()">Termék létrehozása</button>
+    </div>
+    <div class="filters-row">
+      <select id="item-type-select"></select>
+      <input id="new-size" placeholder="Új méret (pl. XL)">
+      <button onclick="addSize()">Méret hozzáadása</button>
+    </div>
+    <div class="table-container">
+      <table id="base-products-table">
+        <thead>
+          <tr>
+            <th data-col="type">Típus</th>
+            <th data-col="size">Méret</th>
+            <th>Művelet</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="employees" class="tab-content hidden">
+    <h3>Dolgozók kezelése</h3>
+    <div class="filters-row">
+      <input id="new-employee" placeholder="Dolgozó neve">
+      <select id="new-employee-type">
+        <option value="Saját">Saját</option>
+        <option value="Kölcsönzött">Kölcsönzött</option>
+      </select>
+      <button onclick="addEmployee()">Hozzáad</button>
+    </div>
+    <div class="table-container">
+      <table id="employees-table">
+        <thead>
+          <tr>
+            <th data-col="name">Név <button class="filter-btn" onclick="openFilter('employees-table','name',event)">▼</button></th>
+            <th data-col="emptype">Típus</th>
+            <th>Művelet</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="movements" class="tab-content hidden">
+    <h3>Mozgások naplója / Bizonylat</h3>
+    <div class="filters-row">
+      <label>Dátum: <input type="date" id="mov-date-from" onchange="renderMovements()"></label>
+      <label>-ig: <input type="date" id="mov-date-to" onchange="renderMovements()"></label>
+      <button onclick="exportMovements()" class="btn-outline" style="background:white;">Excel Export</button>
+      <button onclick="printSlip()" style="background:#4b5563;">🖨️ Bizonylat nyomtatása</button>
+    </div>
+    <div class="table-container">
+      <table id="movements-table">
+        <thead>
+          <tr>
+            <th data-col="date">Dátum</th>
+            <th data-col="employee">Dolgozó <button class="filter-btn" onclick="openFilter('movements-table','employee',event)">▼</button></th>
+            <th data-col="type">Művelet</th>
+            <th data-col="item">Termék <button class="filter-btn" onclick="openFilter('movements-table','item',event)">▼</button></th>
+            <th data-col="size">Méret</th>
+            <th data-col="qty">Menny.</th>
+            <th data-col="receipt">Számla</th>
+            <th>Törlés</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="backup" class="tab-content hidden">
+    <h3>Biztonsági mentés</h3>
+    <button onclick="manualBackup()">Adatok mentése fájlba (.json)</button>
+    <hr>
+    <div id="restore-wrap" style="margin-top:10px;">
+      <h4>Visszatöltés</h4>
+      <input type="file" id="restore-file" accept=".json">
+      <button onclick="restoreBackup()" class="danger-btn">Visszatöltés</button>
+    </div>
+  </div>
+</div>
+
+<div id="print-area"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+  // =========================================================================
+  // GOOGLE SHEETS INTEGRÁCIÓ (Ide másold be a kapott linkedet)
+  // =========================================================================
+  const GOOGLE_WEB_APP_URL = 'IDE_MÁSOLD_BE_A_LINKET'; 
+
+  // --- Jelszavak ---
+  const USER_PASSWORD = 'schruha';
+  const ADMIN_PASSWORD = 'Schedl@12345!';
+
+  let items = [], employees = [], movements = [], batches = []; 
+  let currentUser = { role: 'user' };
+
+  const lastRendered = {
+    'inventory-table': [], 'income-inventory-table': [], 'expense-inventory-table': [],
+    'base-products-table': [], 'employees-table': [], 'movements-table': [], 'receipts-table': []
+  };
+  const tableFilters = {};
+
+  function sizeRank(s) {
+    if (!s) return 9999;
+    const m = { 'XS':1, 'S':2, 'M':3, 'L':4, 'XL':5, 'XXL':6, '2XL':6, '3XL':7, 'XXXL':7, '4XL':8 };
+    if (m[s.toUpperCase()]) return m[s.toUpperCase()];
+    const num = parseInt(s, 10);
+    if (!isNaN(num)) return 100 + num; 
+    return 5000;
+  }
+
+  function login() {
+    const pw = document.getElementById('login-password').value.trim();
+    const err = document.getElementById('login-error');
+    if (pw === USER_PASSWORD) currentUser.role = 'user';
+    else if (pw === ADMIN_PASSWORD) currentUser.role = 'admin';
+    else { err.classList.remove('hidden'); return; }
+    err.classList.add('hidden');
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('main-app').classList.remove('hidden');
+    if (currentUser.role !== 'admin') document.getElementById('restore-wrap').style.display = 'none';
+    init();
+    showTab('income');
+  }
+
+  function showTab(id) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+    const activeTab = document.querySelector(`.tab[onclick="showTab('${id}')"]`);
+    if(activeTab) activeTab.classList.add('active');
+    document.getElementById(id).classList.remove('hidden');
+
+    if(id==='income'||id==='expense') renderInventoryTable(`${id}-inventory-table`);
+    if(id==='inventory') renderInventoryTable('inventory-table');
+    if(id==='products') renderBaseProducts();
+    if(id==='employees') renderEmployees();
+    if(id==='movements') renderMovements();
+    if(id==='receipts') renderReceipts();
+    updateSelects();
+  }
+
+  function init() {
+    autoLoadData();
+    updateSelects();
+    renderInventoryTable('inventory-table');
+  }
+
+  function autoSaveData() {
+    recalcItemsQtyFromBatches();
+    const payload = { items, employees, movements, batches };
+    localStorage.setItem('raktarData', JSON.stringify(payload));
+    
+    if (GOOGLE_WEB_APP_URL && GOOGLE_WEB_APP_URL !== 'IDE_MÁSOLD_BE_A_LINKET') {
+      fetch(GOOGLE_WEB_APP_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(e => console.log('Hiba a Google szinkronizáláskor:', e));
+    }
+  }
+
+  function autoLoadData() {
+    const s = localStorage.getItem('raktarData');
+    if (s) {
+      try {
+        const d = JSON.parse(s);
+        items = d.items || []; employees = d.employees || [];
+        movements = (d.movements || []).map(m => { if (!m.id) m.id = 'mov_' + Math.random().toString(36).slice(2); return m; });
+        batches = d.batches || [];
+        
+        employees.forEach(e => { if(!e.empType) e.empType = 'Saját'; });
+
+        if ((!d.batches || d.batches.length === 0) && items.some(i => i.qty > 0)) {
+           items.forEach(i => {
+             if (i.qty > 0) batches.push({
+                 id: 'batch_init_' + Math.random().toString(36).slice(2),
+                 type: i.type, size: i.size, receipt: 'Kezdeti Készlet',
+                 qty: i.qty, originalQty: i.qty, date: new Date().toISOString(), price: 0
+             });
+           });
+        }
+        recalcItemsQtyFromBatches();
+      } catch(e) {}
+    }
+  }
+
+  function recalcItemsQtyFromBatches() {
+    items.forEach(i => i.qty = 0);
+    batches.forEach(b => {
+      const it = items.find(i => i.type === b.type && i.size === b.size);
+      if (it) it.qty += b.qty;
+    });
+  }
+
+  function updateSelects() {
+    const typeSelects = [document.getElementById('item-type-select'), document.getElementById('income-type'), document.getElementById('expense-type')];
+    const types = [...new Set(items.map(i => i.type))].sort((a,b)=>a.localeCompare(b));
+    typeSelects.forEach(sel => {
+      if (!sel) return;
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">-- Válassz típust --</option>';
+      types.forEach(t => sel.innerHTML += `<option ${t===cur?'selected':''}>${t}</option>`);
+    });
+    const empSel = document.getElementById('employee-select');
+    const curEmp = empSel.value;
+    empSel.innerHTML = '<option value="">-- Válassz dolgozót --</option>';
+    employees.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(e => {
+      empSel.innerHTML += `<option ${e.name===curEmp?'selected':''}>${e.name}</option>`;
+    });
+    if(document.getElementById('income-type')) document.getElementById('income-type').onchange = () => updateSizes('income');
+    if(document.getElementById('expense-type')) document.getElementById('expense-type').onchange = () => updateSizes('expense');
+  }
+
+  function updateSizes(section) {
+    const type = document.getElementById(section + '-type').value;
+    const sel = document.getElementById(section + '-size');
+    const sizes = [...new Set(items.filter(i => i.type === type).map(i => i.size))];
+    sel.innerHTML = '<option value="">-- Méret --</option>';
+    sizes.slice().sort((a,b)=>sizeRank(a)-sizeRank(b)||a.localeCompare(b)).forEach(s => sel.innerHTML += `<option>${s}</option>`);
+  }
+
+  function addItem() {
+    const type = document.getElementById('new-item-type').value.trim();
+    if (!type) return alert('Adj meg típust');
+    if (items.some(i => i.type.toLowerCase() === type.toLowerCase() && !i.size)) return alert('Már létezik');
+    items.push({ type, size: '', qty: 0, minStock: 0 });
+    document.getElementById('new-item-type').value = '';
+    updateSelects(); renderBaseProducts(); autoSaveData();
+  }
+
+  function addSize() {
+    const type = document.getElementById('item-type-select').value;
+    const size = document.getElementById('new-size').value.trim();
+    if (!type || !size) return alert('Válassz típust és írj be méretet!');
+    if (items.some(i => i.type === type && i.size.toLowerCase() === size.toLowerCase())) return alert('Már létezik');
+    items.push({ type, size, qty: 0, minStock: 0 });
+    document.getElementById('new-size').value = '';
+    renderBaseProducts(); updateSelects(); autoSaveData();
+  }
+
+  function addEmployee() {
+    const name = document.getElementById('new-employee').value.trim();
+    const type = document.getElementById('new-employee-type').value;
+    if (!name) return;
+    if (employees.some(e => e.name.toLowerCase() === name.toLowerCase())) return alert('Már létezik');
+    employees.push({ name, empType: type });
+    document.getElementById('new-employee').value = '';
+    renderEmployees(); updateSelects(); autoSaveData();
+  }
+  
+  window.updateEmpType = function(name, val) {
+    const emp = employees.find(e => e.name === name);
+    if(emp) { emp.empType = val; autoSaveData(); }
+  }
+
+  function addIncome() {
+    const type = document.getElementById('income-type').value;
+    const size = document.getElementById('income-size').value;
+    const qty = parseInt(document.getElementById('income-qty').value) || 0;
+    const receipt = document.getElementById('income-receipt').value.trim();
+    const price = parseFloat(document.getElementById('income-price').value) || 0;
+    
+    if (!type || !size || qty <= 0) return alert('Tölts ki minden mezőt!');
+    if (!receipt) return alert('Kérlek add meg a Számla számát!');
+    
+    let ex = items.find(i => i.type === type && i.size === size);
+    if (!ex) items.push({ type, size, qty: 0, minStock: 0 });
+
+    const batchId = 'batch_' + Date.now();
+    batches.push({ id: batchId, type, size, receipt, qty, originalQty: qty, date: new Date().toISOString(), price });
+
+    movements.push({ id: 'mov_' + Date.now(), date: new Date().toISOString(), type: 'Bevétel', item: type, size, qty, employee: null, receipt, batchId });
+    alert('Bevétel rögzítve!'); autoSaveData();
+    renderInventoryTable('income-inventory-table');
+    document.getElementById('income-qty').value = "1";
+    document.getElementById('income-receipt').value = "";
+    document.getElementById('income-price').value = "";
+  }
+
+  function addExpense() {
+    const type = document.getElementById('expense-type').value;
+    const size = document.getElementById('expense-size').value;
+    let qtyNeeded = parseInt(document.getElementById('expense-qty').value) || 0;
+    const emp = document.getElementById('employee-select').value;
+    if (!type || !size || !emp || qtyNeeded <= 0) return alert('Tölts ki minden mezőt!');
+
+    const totalStock = items.find(i => i.type === type && i.size === size)?.qty || 0;
+    if (totalStock < qtyNeeded) return alert(`Nincs elég készlet! Jelenleg: ${totalStock} db`);
+
+    let availableBatches = batches.filter(b => b.type === type && b.size === size && b.qty > 0).sort((a,b) => new Date(a.date) - new Date(b.date));
+    let usedReceipts = []; let affectedBatches = []; let remaining = qtyNeeded;
+
+    for (let batch of availableBatches) {
+      if (remaining <= 0) break;
+      let take = Math.min(batch.qty, remaining);
+      batch.qty -= take; remaining -= take;
+      usedReceipts.push(`${batch.receipt} (${take}db)`);
+      affectedBatches.push({ batchId: batch.id, qty: take });
+    }
+
+    movements.push({ id: 'mov_' + Date.now(), date: new Date().toISOString(), type: 'Kiadás', item: type, size, qty: qtyNeeded, employee: emp, receipt: usedReceipts.join(', '), affectedBatches });
+    alert('Kiadás rögzítve!'); autoSaveData();
+    renderInventoryTable('expense-inventory-table');
+    document.getElementById('expense-qty').value = "1";
+  }
+
+  function renderInventoryTable(id) {
+    const tbody = document.querySelector(`#${id} tbody`);
+    tbody.innerHTML = '';
+    let rows = items.filter(i => i.size); 
+    rows = applyDataFilters(id, rows, { 'type': r => r.type, 'size': r => r.size });
+    lastRendered[id] = rows;
+    if (!rows.length) { tbody.innerHTML = `<tr><td colspan="${id==='inventory-table'?5:3}">Nincs adat</td></tr>`; return; }
+
+    rows.sort((a,b)=>a.type.localeCompare(b.type) || sizeRank(a.size)-sizeRank(b.size)).forEach(r => {
+      const tr = document.createElement('tr');
+      if (r.minStock && r.qty < r.minStock) tr.classList.add('low-stock');
+      
+      let extraHtml = '';
+      if(id === 'inventory-table') {
+        const itemBatches = batches.filter(b => b.type === r.type && b.size === r.size).sort((a,b) => new Date(b.date) - new Date(a.date));
+        const lastPrice = itemBatches.length > 0 ? (itemBatches[0].price || 0) : 0;
+        extraHtml = `<td>${lastPrice}</td><td><input type="number" value="${r.minStock||0}" style="width:50px" onchange="updateMinStock('${r.type}','${r.size}',this.value)"></td>`;
+      }
+      tr.innerHTML = `<td>${r.type}</td><td>${r.size}</td><td><strong>${r.qty}</strong></td>${extraHtml}`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  window.updateBatchPrice = function(batchId, val) {
+    const b = batches.find(x => x.id === batchId);
+    if (b) { b.price = parseFloat(val) || 0; autoSaveData(); }
+  }
+
+  function renderReceipts() {
+    const tbody = document.querySelector('#receipts-table tbody');
+    tbody.innerHTML = '';
+    let rows = batches.filter(b => b.qty > 0);
+    rows = applyDataFilters('receipts-table', rows, { 'receipt': r => r.receipt, 'type': r => r.type, 'size': r => r.size });
+    lastRendered['receipts-table'] = rows;
+    if(!rows.length) return tbody.innerHTML = '<tr><td colspan="6">Nincs raktáron lévő tétel.</td></tr>';
+
+    rows.sort((a,b) => a.type.localeCompare(b.type) || sizeRank(a.size)-sizeRank(b.size) || new Date(a.date)-new Date(b.date)).forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${r.receipt}</td><td>${r.type}</td><td>${r.size}</td>
+        <td><strong>${r.qty}</strong> / ${r.originalQty}</td>
+        <td contenteditable="true" onblur="updateBatchPrice('${r.id}', this.innerText)" style="background:#fef9c3; border-bottom:1px dashed #ccc; cursor:text;">${r.price || 0}</td>
+        <td>${new Date(r.date).toLocaleDateString()}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderBaseProducts() {
+    const tbody = document.querySelector('#base-products-table tbody');
+    tbody.innerHTML = '';
+    let rows = applyDataFilters('base-products-table', items.slice(), { 'type': r=>r.type, 'size': r=>r.size||'-' });
+    lastRendered['base-products-table'] = rows;
+    if(!rows.length) return tbody.innerHTML = '<tr><td colspan="3">Üres</td></tr>';
+    rows.sort((a,b)=>a.type.localeCompare(b.type) || (a.size||'').localeCompare(b.size||'')).forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${r.type}</td><td>${r.size||'-'}</td><td><button class="danger-btn" onclick="deleteItem('${r.type}','${r.size||''}')">Törlés</button></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderEmployees() {
+    const tbody = document.querySelector('#employees-table tbody');
+    tbody.innerHTML = '';
+    let rows = applyDataFilters('employees-table', employees.slice(), { 'name': r=>r.name });
+    lastRendered['employees-table'] = rows;
+    if(!rows.length) return tbody.innerHTML = '<tr><td colspan="3">Üres</td></tr>';
+    rows.sort((a,b)=>a.name.localeCompare(b.name)).forEach(e => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${e.name}</td>
+        <td>
+          <select onchange="updateEmpType('${e.name}', this.value)" style="border:none; background:transparent;">
+            <option ${e.empType==='Saját'?'selected':''}>Saját</option>
+            <option ${e.empType==='Kölcsönzött'?'selected':''}>Kölcsönzött</option>
+          </select>
+        </td>
+        <td><button class="danger-btn" onclick="deleteEmployee('${e.name}')">Törlés</button></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderMovements() {
+    const tbody = document.querySelector('#movements-table tbody');
+    tbody.innerHTML = '';
+    const from = document.getElementById('mov-date-from').value;
+    const to = document.getElementById('mov-date-to').value;
+    let rows = movements.slice();
+    if (from) rows = rows.filter(m => new Date(m.date) >= new Date(from));
+    if (to) rows = rows.filter(m => new Date(m.date) <= new Date(to + 'T23:59:59'));
+    rows = applyDataFilters('movements-table', rows, { 'employee': r=>r.employee||'-', 'type': r=>r.type, 'item': r=>r.item, 'size': r=>r.size||'' });
+    rows.sort((a,b)=>new Date(b.date)-new Date(a.date));
+    lastRendered['movements-table'] = rows;
+    if (!rows.length) return tbody.innerHTML = '<tr><td colspan="8">Nincs mozgás</td></tr>';
+
+    rows.forEach(m => {
+      const ds = new Date(m.date).toLocaleString([], {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit', minute:'2-digit'});
+      const tr = document.createElement('tr');
+      
+      let canDel = false;
+      if (m.type === 'Bevétel' && m.batchId) {
+          const b = batches.find(b => b.id === m.batchId);
+          if (b && b.qty === b.originalQty) canDel = true;
+      } else if (m.type === 'Kiadás' && m.affectedBatches && m.affectedBatches.length > 0) canDel = true;
+
+      const delBtn = canDel ? `<button class="danger-btn" onclick="deleteMovement('${m.id}')">X</button>` : `<button class="disabled-btn">X</button>`;
+      tr.innerHTML = `<td>${ds}</td><td>${m.employee || '-'}</td><td>${m.type}</td><td>${m.item}</td><td>${m.size || ''}</td><td>${m.qty}</td><td style="font-size:12px;">${m.receipt || '-'}</td><td>${delBtn}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function deleteItem(t, s) { if(confirm('Törlöd?')) { items=items.filter(i=>!(i.type===t && (i.size||'')===(s||''))); renderBaseProducts(); autoSaveData(); } }
+  function deleteEmployee(n) { if(confirm('Törlöd?')) { employees=employees.filter(e=>e.name!==n); renderEmployees(); autoSaveData(); } }
+  function updateMinStock(t, s, v) { const i=items.find(x=>x.type===t && x.size===s); if(i){ i.minStock=Number(v); autoSaveData(); } }
+
+  function deleteMovement(id) {
+      const mIdx = movements.findIndex(m => m.id === id);
+      if (mIdx === -1) return;
+      const m = movements[mIdx];
+      if (!confirm('Biztosan törlöd/visszavonod?')) return;
+      if (m.type === 'Bevétel') {
+          const bIdx = batches.findIndex(b => b.id === m.batchId);
+          if (bIdx > -1) {
+              if (batches[bIdx].qty !== batches[bIdx].originalQty) return alert('HIBA: Ebből a bevételből már történt kiadás!');
+              batches.splice(bIdx, 1);
+          }
+      } else if (m.type === 'Kiadás' && m.affectedBatches) {
+          m.affectedBatches.forEach(aff => { const b = batches.find(x => x.id === aff.batchId); if (b) b.qty += aff.qty; });
+      }
+      movements.splice(mIdx, 1);
+      alert('Mozgás visszavonva.'); autoSaveData(); renderMovements();
+      renderInventoryTable('income-inventory-table'); renderInventoryTable('expense-inventory-table'); renderInventoryTable('inventory-table');
+  }
+
+  function exportInventory() {
+    const rows = lastRendered['inventory-table'];
+    if(!rows.length) return alert('Nincs adat');
+    const ws = XLSX.utils.json_to_sheet(rows.map(r=>({ 'Típus':r.type, 'Méret':r.size, 'Készlet':r.qty })));
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Készlet"); XLSX.writeFile(wb, "Keszlet.xlsx");
+  }
+
+  function exportLeltar() {
+    const map = {};
+    batches.forEach(b => {
+      if(b.qty <= 0) return; 
+      const p = b.price || 0;
+      const key = b.type + '_' + b.size + '_' + p;
+      if(!map[key]) map[key] = { 'Típus': b.type, 'Méret': b.size, 'Ár (Ft/db)': p, 'Készlet (db)': 0 };
+      map[key]['Készlet (db)'] += b.qty;
+    });
+    
+    const rows = Object.values(map).sort((a,b)=>a['Típus'].localeCompare(b['Típus']));
+    if(!rows.length) return alert('Nincs leltározható készlet.');
+    
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Leltar");
+    XLSX.writeFile(wb, "Leltar_Arak_Szerint.xlsx");
+  }
+
+  function exportMovements() {
+    const rows = lastRendered['movements-table'];
+    if(!rows.length) return alert('Nincs adat');
+    const ws = XLSX.utils.json_to_sheet(rows.map(m=>({ 'Dátum': new Date(m.date).toLocaleString(), 'Dolgozó': m.employee||'', 'Típus': m.type, 'Termék': m.item, 'Méret': m.size, 'Db': m.qty, 'Számla': m.receipt || '' })));
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Mozgasok"); XLSX.writeFile(wb, "Mozgasok.xlsx");
+  }
+
+  function manualBackup() {
+    const blob = new Blob([JSON.stringify({items,employees,movements,batches})], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
+  }
+  function restoreBackup() {
+    const f = document.getElementById('restore-file').files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = e => {
+      try {
+        const d = JSON.parse(e.target.result);
+        items = d.items || []; employees = d.employees || []; movements = d.movements || []; batches = d.batches || [];
+        autoSaveData(); alert('Sikeres visszatöltés!'); location.reload(); 
+      } catch(err){ alert('Hiba a fájl feldolgozásakor!'); }
+    };
+    r.readAsText(f);
+  }
+
+  function printSlip() {
+    const rows = lastRendered['movements-table'] || [];
+    if (rows.length === 0) return alert('Nincs mit nyomtatni! Szűrj rá egy dolgozó kiadásaira!');
+
+    const employeesInList = [...new Set(rows.map(r => r.employee).filter(Boolean))];
+    const employeeName = employeesInList.length === 1 ? employeesInList[0] : (employeesInList.length > 1 ? 'Vegyes lista' : '-');
+    const today = new Date().toLocaleDateString();
+
+    const printDiv = document.getElementById('print-area');
+    let rowsHtml = '';
+    rows.forEach(r => {
+       rowsHtml += `<tr><td>${new Date(r.date).toLocaleDateString()}</td><td>${r.item}</td><td>${r.size || '-'}</td><td>${r.qty} db</td><td>${r.type}</td></tr>`;
+    });
+
+    printDiv.innerHTML = `
+      <div class="print-header">
+        <div style="text-align: left;">
+          <h1>Munkaruha Kiadási Bizonylat</h1>
+          <p>Schedl Hungária Kft.<br>4002 Debrecen Csonka János utca 7.</p>
+        </div>
+        <div>
+          <img src="https://mabri.vision/wp-content/uploads/2023/08/Logo-Schedl.png" alt="Schedl Logo" style="height: 65px; object-fit: contain;">
+        </div>
+      </div>
+      <div class="print-meta">
+        <div><strong>Dolgozó:</strong> ${employeeName}</div>
+        <div><strong>Dátum:</strong> ${today}</div>
+      </div>
+      <table class="print-table">
+        <thead><tr><th>Dátum</th><th>Termék</th><th>Méret</th><th>Mennyiség</th><th>Művelet</th></tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+      <div class="print-footer">
+        <div class="signature-box"><div class="signature-line">Kiadta (Raktár)</div></div>
+        <div class="signature-box"><div class="signature-line">Átvette (Dolgozó)</div></div>
+      </div>
+    `;
+    window.print();
+  }
+
+  function openFilter(tableId, colKey, ev) {
+    ev.stopPropagation(); closeAllFilters();
+    const th = ev.target.closest('th');
+    const dropdown = document.createElement('div'); dropdown.className = 'filter-dropdown';
+    const rows = lastRendered[tableId] || []; let vals = [];
+
+    if(tableId.includes('inventory') || tableId==='base-products-table'){ if(colKey==='type') vals=[...new Set(rows.map(r=>r.type))]; if(colKey==='size') vals=[...new Set(rows.map(r=>r.size))]; }
+    if(tableId==='receipts-table') { if(colKey==='receipt') vals=[...new Set(rows.map(r=>r.receipt))]; if(colKey==='type') vals=[...new Set(rows.map(r=>r.type))]; if(colKey==='size') vals=[...new Set(rows.map(r=>r.size))]; }
+    if(tableId==='employees-table' && colKey==='name') vals=[...new Set(rows.map(r=>r.name))];
+    if(tableId==='movements-table') { if(colKey==='employee') vals=[...new Set(rows.map(r=>r.employee||'-'))]; if(colKey==='type') vals=[...new Set(rows.map(r=>r.type))]; if(colKey==='item') vals=[...new Set(rows.map(r=>r.item))]; if(colKey==='size') vals=[...new Set(rows.map(r=>r.size||''))]; }
+    
+    vals.sort((a,b)=>{ if(!a) return 1; if(!b) return -1; return sizeRank(a)-sizeRank(b) || a.toString().localeCompare(b.toString()); });
+    const active = (tableFilters[tableId] && tableFilters[tableId][colKey]) ? new Set(tableFilters[tableId][colKey]) : null;
+
+    vals.forEach(v => {
+      const lbl = document.createElement('label'); lbl.onclick = e => e.stopPropagation();
+      const chk = !active || active.has(v);
+      lbl.innerHTML = `<input type="checkbox" value="${v}" ${chk?'checked':''}> ${v||'(üres)'}`;
+      dropdown.appendChild(lbl);
+    });
+
+    const act = document.createElement('div'); act.className = 'filter-actions';
+    const btnNone = document.createElement('button'); btnNone.className = 'btn-secondary'; btnNone.innerHTML = '☐ Mind töröl';
+    btnNone.onclick = (e) => { e.stopPropagation(); dropdown.querySelectorAll('input[type=checkbox]').forEach(c => c.checked = false); };
+    const btnOk = document.createElement('button'); btnOk.textContent = 'OK';
+    btnOk.onclick = e => {
+      e.stopPropagation(); const chosen = []; dropdown.querySelectorAll('input:checked').forEach(c=>chosen.push(c.value));
+      if(!tableFilters[tableId]) tableFilters[tableId]={}; tableFilters[tableId][colKey] = chosen;
+      refreshTableById(tableId); dropdown.remove();
+    };
+    const btnClr = document.createElement('button'); btnClr.className = 'btn-outline'; btnClr.textContent = 'Szűrő ki';
+    btnClr.onclick = e => { e.stopPropagation(); if(tableFilters[tableId]) delete tableFilters[tableId][colKey]; refreshTableById(tableId); dropdown.remove(); };
+
+    act.appendChild(btnNone); act.appendChild(btnClr); act.appendChild(btnOk);
+    dropdown.appendChild(act); th.appendChild(dropdown);
+  }
+
+  function closeAllFilters() { document.querySelectorAll('.filter-dropdown').forEach(d=>d.remove()); }
+  document.addEventListener('click', e => { if(!e.target.closest('.filter-dropdown') && !e.target.closest('.filter-btn')) closeAllFilters(); });
+
+  function refreshTableById(tid) {
+    if(tid.includes('inventory')) renderInventoryTable(tid);
+    if(tid==='base-products-table') renderBaseProducts();
+    if(tid==='employees-table') renderEmployees();
+    if(tid==='movements-table') renderMovements();
+    if(tid==='receipts-table') renderReceipts();
+  }
+
+  function applyDataFilters(tid, rows, mapFns) {
+    const tf = tableFilters[tid]; if(!tf) return rows;
+    return rows.filter(r => {
+      for(const col in tf) {
+        const sel = tf[col];
+        if(sel && sel.length) { const val = mapFns[col] ? mapFns[col](r) : ''; if(!sel.includes(val)) return false; }
+      }
+      return true;
+    });
+  }
+</script>
+</body>
+</html>
