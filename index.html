@@ -104,7 +104,7 @@
       <select id="income-type" style="min-width:140px"></select>
       <select id="income-size" style="min-width:90px"></select>
       <input id="income-qty" type="number" min="1" value="1" style="width:70px;" placeholder="Db">
-      <input id="income-price" type="number" min="0" style="width:100px;" placeholder="Ár (Ft/db)">
+      <input id="income-price" type="number" min="0" style="width:100px;" placeholder="Ár (EUR/db)">
       <button onclick="addIncome()">+ Hozzáad</button>
     </div>
     <h4>Aktuális készlet (Összesített)</h4>
@@ -158,7 +158,7 @@
             <th data-col="type">Típus <button class="filter-btn" onclick="openFilter('inventory-table','type',event)">▼</button></th>
             <th data-col="size">Méret <button class="filter-btn" onclick="openFilter('inventory-table','size',event)">▼</button></th>
             <th data-col="qty">Darab</th>
-            <th data-col="price">Utolsó Ár (Ft)</th>
+            <th data-col="price">Utolsó Ár (EUR)</th>
             <th data-col="min">Minimum</th>
           </tr>
         </thead>
@@ -178,7 +178,7 @@
             <th data-col="type">Típus <button class="filter-btn" onclick="openFilter('receipts-table','type',event)">▼</button></th>
             <th data-col="size">Méret <button class="filter-btn" onclick="openFilter('receipts-table','size',event)">▼</button></th>
             <th data-col="qty">Maradék db</th>
-            <th data-col="price">Ár (Ft) ✏️</th>
+            <th data-col="price">Ár (EUR) ✏️</th>
             <th data-col="date">Beérkezés ideje</th>
           </tr>
         </thead>
@@ -280,7 +280,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
   // =========================================================================
-  // GOOGLE SHEETS INTEGRÁCIÓ (Ide másold be a kapott linkedet)
+  // GOOGLE SHEETS INTEGRÁCIÓ (IDE MÁSOLD VISSZA A KORÁBBAN KAPOTT LINKET)
   // =========================================================================
   const GOOGLE_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwiKWgjNIlhBe-Zq3FidGdP6p93lTpEYJ5B7bBp79gWtsGKTkepafhPRfbbG1zszA/exec'; 
 
@@ -648,7 +648,7 @@
       if(b.qty <= 0) return; 
       const p = b.price || 0;
       const key = b.type + '_' + b.size + '_' + p;
-      if(!map[key]) map[key] = { 'Típus': b.type, 'Méret': b.size, 'Ár (Ft/db)': p, 'Készlet (db)': 0 };
+      if(!map[key]) map[key] = { 'Típus': b.type, 'Méret': b.size, 'Ár (EUR/db)': p, 'Készlet (db)': 0 };
       map[key]['Készlet (db)'] += b.qty;
     });
     
