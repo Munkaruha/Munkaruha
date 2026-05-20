@@ -17,7 +17,7 @@
     }
     * { box-sizing: border-box; }
     body { font-family: system-ui, -apple-system, sans-serif; margin: 0; background: var(--bg); color: var(--text); }
-    header { background: var(--panel); border-bottom: 1px solid var(--border); padding: 12px 20px; text-align: center; font-weight: 700; font-size: 18px; color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    header { background: var(--panel); border-bottom: 1px solid var(--border); padding: 12px 20px; text-align: center; font-weight: 700; font-size: 18px; color: var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
     button { background: var(--primary); color: #fff; border: none; padding: 6px 14px; border-radius: var(--radius); cursor: pointer; font-size: 14px; transition: background 0.2s; }
     button:hover { background: #08467c; }
     input, select { padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px; }
@@ -76,7 +76,10 @@
 </head>
 <body>
 
-<header>Schedl Munkaruha - Nyilvántartás</header>
+<header>
+  <div id="nav-title">Schedl Munkaruha - Nyilvántartás</div>
+  <button id="sync-indicator-btn" onclick="loadDataFromGoogle()" class="hidden" style="background:#059669;">🔄 Google Szinkronizálás</button>
+</header>
 
 <div id="login-screen">
   <h2>Rendszer Belépés</h2>
@@ -110,13 +113,7 @@
     <h4>Aktuális készlet (Összesített)</h4>
     <div class="table-container">
       <table id="income-inventory-table">
-        <thead>
-          <tr>
-            <th data-col="type">Típus</th>
-            <th data-col="size">Méret</th>
-            <th data-col="qty">Darab</th>
-          </tr>
-        </thead>
+        <thead><tr><th data-col="type">Típus</th><th data-col="size">Méret</th><th data-col="qty">Darab</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -133,13 +130,7 @@
     </div>
     <div class="table-container">
       <table id="expense-inventory-table">
-        <thead>
-          <tr>
-            <th data-col="type">Típus</th>
-            <th data-col="size">Méret</th>
-            <th data-col="qty">Készlet</th>
-          </tr>
-        </thead>
+        <thead><tr><th data-col="type">Típus</th><th data-col="size">Méret</th><th data-col="qty">Készlet</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -200,13 +191,7 @@
     </div>
     <div class="table-container">
       <table id="base-products-table">
-        <thead>
-          <tr>
-            <th data-col="type">Típus</th>
-            <th data-col="size">Méret</th>
-            <th>Művelet</th>
-          </tr>
-        </thead>
+        <thead><tr><th data-col="type">Típus</th><th data-col="size">Méret</th><th>Művelet</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -224,13 +209,7 @@
     </div>
     <div class="table-container">
       <table id="employees-table">
-        <thead>
-          <tr>
-            <th data-col="name">Név <button class="filter-btn" onclick="openFilter('employees-table','name',event)">▼</button></th>
-            <th data-col="emptype">Típus</th>
-            <th>Művelet</th>
-          </tr>
-        </thead>
+        <thead><tr><th data-col="name">Név <button class="filter-btn" onclick="openFilter('employees-table','name',event)">▼</button></th><th data-col="emptype">Típus</th><th>Művelet</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -280,11 +259,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
   // =========================================================================
-  // GOOGLE SHEETS INTEGRÁCIÓ (IDE MÁSOLD VISSZA A KORÁBBAN KAPOTT LINKET)
+  // GOOGLE SHEETS INTEGRÁCIÓ (IDE MÁSOLD BE A GOOGLE DEPLOYMENT LINKEDET!)
   // =========================================================================
-  const GOOGLE_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwiKWgjNIlhBe-Zq3FidGdP6p93lTpEYJ5B7bBp79gWtsGKTkepafhPRfbbG1zszA/exec'; 
+  const GOOGLE_WEB_APP_URL = 'IDE_MÁSOLD_BE_A_LINKET'; 
 
-  // --- Jelszavak ---
   const USER_PASSWORD = 'schruha';
   const ADMIN_PASSWORD = 'Schedl@12345!';
 
@@ -315,9 +293,10 @@
     err.classList.add('hidden');
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('main-app').classList.remove('hidden');
+    document.getElementById('sync-indicator-btn').classList.remove('hidden');
     if (currentUser.role !== 'admin') document.getElementById('restore-wrap').style.display = 'none';
+    
     init();
-    showTab('income');
   }
 
   function showTab(id) {
@@ -337,11 +316,58 @@
   }
 
   function init() {
-    autoLoadData();
+    autoLoadData(); 
     updateSelects();
     renderInventoryTable('inventory-table');
+    
+    // Azonnali letöltés a Google-ből belépés után
+    loadDataFromGoogle();
   }
 
+  // LETÖLTÉS A FELHŐBŐL
+  function loadDataFromGoogle() {
+    if (!GOOGLE_WEB_APP_URL || GOOGLE_WEB_APP_URL === 'IDE_MÁSOLD_BE_A_LINKET') return;
+    
+    const btn = document.getElementById('sync-indicator-btn');
+    btn.innerText = "🔄 Letöltés...";
+    btn.style.background = "#d97706";
+
+    fetch(GOOGLE_WEB_APP_URL)
+      .then(res => res.json())
+      .then(d => {
+        if (d && (d.items || d.employees || d.movements || d.batches)) {
+          items = d.items || [];
+          employees = d.employees || [];
+          movements = d.movements || [];
+          batches = d.batches || [];
+          
+          localStorage.setItem('raktarData', JSON.stringify(d));
+          recalcItemsQtyFromBatches();
+          
+          // Frissítsük az éppen aktív fület
+          const activeTab = document.querySelector('.tab.active');
+          if (activeTab) {
+            const id = activeTab.getAttribute('onclick').match(/'([^']+)'/)[1];
+            showTab(id);
+          } else {
+            showTab('income');
+          }
+          
+          btn.innerText = "✅ Google Szinkronizálva";
+          btn.style.background = "#059669";
+        } else {
+          btn.innerText = "🔄 Google Szinkronizálás";
+          btn.style.background = "#0f5fa8";
+        }
+      })
+      .catch(e => {
+        console.error("Hiba a letöltéskor:", e);
+        btn.innerText = "⚠️ Offline mód (Helyi adat)";
+        btn.style.background = "#b91c1c";
+      });
+  }
+
+  // FELTÖLTÉS A FELHŐBE
   function autoSaveData() {
     recalcItemsQtyFromBatches();
     const payload = { items, employees, movements, batches };
@@ -353,7 +379,11 @@
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      }).catch(e => console.log('Hiba a Google szinkronizáláskor:', e));
+      }).then(() => {
+         const btn = document.getElementById('sync-indicator-btn');
+         btn.innerText = "✅ Változások mentve a Google-be";
+         btn.style.background = "#059669";
+      }).catch(e => console.log('Hiba a küldésnél:', e));
     }
   }
 
@@ -365,18 +395,7 @@
         items = d.items || []; employees = d.employees || [];
         movements = (d.movements || []).map(m => { if (!m.id) m.id = 'mov_' + Math.random().toString(36).slice(2); return m; });
         batches = d.batches || [];
-        
         employees.forEach(e => { if(!e.empType) e.empType = 'Saját'; });
-
-        if ((!d.batches || d.batches.length === 0) && items.some(i => i.qty > 0)) {
-           items.forEach(i => {
-             if (i.qty > 0) batches.push({
-                 id: 'batch_init_' + Math.random().toString(36).slice(2),
-                 type: i.type, size: i.size, receipt: 'Kezdeti Készlet',
-                 qty: i.qty, originalQty: i.qty, date: new Date().toISOString(), price: 0
-             });
-           });
-        }
         recalcItemsQtyFromBatches();
       } catch(e) {}
     }
