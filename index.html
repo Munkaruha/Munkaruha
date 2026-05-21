@@ -160,7 +160,7 @@
 
   <div id="receipts" class="tab-content hidden">
     <h3>Raktáron lévő tételek számlák szerint</h3>
-    <p>A sárgával jelölt <b>Ár</b> cellákra kattintva utólag is módosíthatod a korábbi árakat.</p>
+    <p>A sárgával jelölt <b>Ár</b> cellákra kattintva, majd értékadás után <b>Entert nyomva</b> módosíthatod a korábbi árakat.</p>
     <div class="table-container">
       <table id="receipts-table">
         <thead>
@@ -261,7 +261,7 @@
   // =========================================================================
   // GOOGLE SHEETS INTEGRÁCIÓ (IDE MÁSOLD BE A GOOGLE DEPLOYMENT LINKEDET!)
   // =========================================================================
-  const GOOGLE_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxw65UeGj2-Tyiz1F5NDUfyBuhQdINUEPUHgWGvaRkMKpDpe7yMENGnxl0YpnXiR4c/exec'; 
+  const GOOGLE_WEB_APP_URL = ''; 
 
   const USER_PASSWORD = 'schruha';
   const ADMIN_PASSWORD = 'Schedl@12345!';
@@ -274,6 +274,18 @@
     'base-products-table': [], 'employees-table': [], 'movements-table': [], 'receipts-table': []
   };
   const tableFilters = {};
+
+  // PONT-VESSZŐ FORMÁZÓ SEGÉDFUNKCIÓK
+  function formatEuro(num) {
+    if (isNaN(num) || num === null || num === undefined) return "0,00";
+    return parseFloat(num).toFixed(2).replace('.', ',');
+  }
+
+  function parseEuro(str) {
+    if (!str) return 0;
+    let s = str.toString().replace(',', '.').replace(/[^0-9.-]/g, '');
+    return parseFloat(s) || 0;
+  }
 
   function sizeRank(s) {
     if (!s) return 9999;
@@ -319,15 +331,11 @@
     autoLoadData(); 
     updateSelects();
     renderInventoryTable('inventory-table');
-    
-    // Azonnali letöltés a Google-ből belépés után
     loadDataFromGoogle();
   }
 
-  // LETÖLTÉS A FELHŐBŐL
   function loadDataFromGoogle() {
     if (!GOOGLE_WEB_APP_URL || GOOGLE_WEB_APP_URL === 'IDE_MÁSOLD_BE_A_LINKET' || GOOGLE_WEB_APP_URL === '') return;
-    
     const btn = document.getElementById('sync-indicator-btn');
     btn.innerText = "🔄 Letöltés...";
     btn.style.background = "#d97706";
@@ -340,11 +348,8 @@
           employees = d.employees || [];
           movements = d.movements || [];
           batches = d.batches || [];
-          
           localStorage.setItem('raktarData', JSON.stringify(d));
           recalcItemsQtyFromBatches();
-          
-          // Frissítsük az éppen aktív fület
           const activeTab = document.querySelector('.tab.active');
           if (activeTab) {
             const id = activeTab.getAttribute('onclick').match(/'([^']+)'/)[1];
@@ -352,7 +357,6 @@
           } else {
             showTab('income');
           }
-          
           btn.innerText = "✅ Google Szinkronizálva";
           btn.style.background = "#059669";
         } else {
@@ -367,12 +371,10 @@
       });
   }
 
-  // FELTÖLTÉS A FELHŐBE
   function autoSaveData() {
     recalcItemsQtyFromBatches();
     const payload = { items, employees, movements, batches };
     localStorage.setItem('raktarData', JSON.stringify(payload));
-    
     if (GOOGLE_WEB_APP_URL && GOOGLE_WEB_APP_URL !== 'IDE_MÁSOLD_BE_A_LINKET' && GOOGLE_WEB_APP_URL !== '') {
       fetch(GOOGLE_WEB_APP_URL, {
         method: 'POST',
@@ -476,10 +478,8 @@
     const qty = parseInt(document.getElementById('income-qty').value) || 0;
     const receipt = document.getElementById('income-receipt').value.trim();
     
-    // Tizedesvessző kicserélése pontra, hogy a parseFloat jól működjön
     let priceStr = document.getElementById('income-price').value.trim();
-    priceStr = priceStr.replace(',', '.');
-    const price = parseFloat(priceStr) || 0;
+    const price = parseEuro(priceStr);
     
     if (!type || !size || qty <= 0) return alert('Tölts ki minden mezőt!');
     if (!receipt) return alert('Kérlek add meg a Számla számát!');
@@ -541,18 +541,20 @@
       if(id === 'inventory-table') {
         const itemBatches = batches.filter(b => b.type === r.type && b.size === r.size).sort((a,b) => new Date(b.date) - new Date(a.date));
         const lastPrice = itemBatches.length > 0 ? (itemBatches[0].price || 0) : 0;
-        extraHtml = `<td>${lastPrice}</td><td><input type="number" value="${r.minStock||0}" style="width:50px" onchange="updateMinStock('${r.type}','${r.size}',this.value)"></td>`;
+        extraHtml = `<td>${formatEuro(lastPrice)}</td><td><input type="number" value="${r.minStock||0}" style="width:50px" onchange="updateMinStock('${r.type}','${r.size}',this.value)"></td>`;
       }
       tr.innerHTML = `<td>${r.type}</td><td>${r.size}</td><td><strong>${r.qty}</strong></td>${extraHtml}`;
       tbody.appendChild(tr);
     });
   }
 
+  // UTÓLAGOS ÁR MÓDOSÍTÁS Helyes formátummal
   window.updateBatchPrice = function(batchId, val) {
     const b = batches.find(x => x.id === batchId);
     if (b) { 
-      b.price = parseFloat(val.toString().replace(',', '.')) || 0; 
+      b.price = parseEuro(val); 
       autoSaveData(); 
+      renderReceipts(); // Kényszerített újratöltés a fix 2 tizedesjegyért
     }
   }
 
@@ -569,7 +571,7 @@
       tr.innerHTML = `
         <td>${r.receipt}</td><td>${r.type}</td><td>${r.size}</td>
         <td><strong>${r.qty}</strong> / ${r.originalQty}</td>
-        <td contenteditable="true" onblur="updateBatchPrice('${r.id}', this.innerText)" style="background:#fef9c3; border-bottom:1px dashed #ccc; cursor:text;">${r.price || 0}</td>
+        <td contenteditable="true" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}" onblur="updateBatchPrice('${r.id}', this.innerText)" style="background:#fef9c3; border-bottom:1px dashed #ccc; cursor:text; font-weight: bold;">${formatEuro(r.price)}</td>
         <td>${new Date(r.date).toLocaleDateString()}</td>`;
       tbody.appendChild(tr);
     });
@@ -625,7 +627,6 @@
     rows.forEach(m => {
       const ds = new Date(m.date).toLocaleString([], {year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit', minute:'2-digit'});
       const tr = document.createElement('tr');
-      
       let canDel = false;
       if (m.type === 'Bevétel' && m.batchId) {
           const b = batches.find(b => b.id === m.batchId);
@@ -661,36 +662,48 @@
       renderInventoryTable('income-inventory-table'); renderInventoryTable('expense-inventory-table'); renderInventoryTable('inventory-table');
   }
 
+  // EXCEL EXPORT - KÉSZLET (Számlaszámmal kibővítve)
   function exportInventory() {
     const rows = lastRendered['inventory-table'];
     if(!rows.length) return alert('Nincs adat');
     const ws = XLSX.utils.json_to_sheet(rows.map(r=>{
         const itemBatches = batches.filter(b => b.type === r.type && b.size === r.size && b.qty > 0).sort((a,b) => new Date(b.date) - new Date(a.date));
         const lastPrice = itemBatches.length > 0 ? (itemBatches[0].price || 0) : 0;
+        const lastReceipt = itemBatches.length > 0 ? (itemBatches[0].receipt || '-') : '-';
         
         return { 
             'Típus': r.type, 
             'Méret': r.size, 
             'Készlet (db)': r.qty,
-            'Utolsó Egységár (EUR)': lastPrice,
-            'Összesen (EUR)': parseFloat((r.qty * lastPrice).toFixed(2))
+            'Utolsó Számlaszám': lastReceipt,
+            'Utolsó Egységár (EUR)': formatEuro(lastPrice),
+            'Összesen (EUR)': formatEuro(r.qty * lastPrice)
         };
     }));
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Készlet"); XLSX.writeFile(wb, "Keszlet.xlsx");
   }
 
+  // EXCEL EXPORT - LELTÁR (Számlaszámmal kibővítve)
   function exportLeltar() {
     const map = {};
     batches.forEach(b => {
       if(b.qty <= 0) return; 
       const p = b.price || 0;
-      const key = b.type + '_' + b.size + '_' + p;
-      if(!map[key]) map[key] = { 'Típus': b.type, 'Méret': b.size, 'Készlet (db)': 0, 'Egységár (EUR)': p, 'Összesen (EUR)': 0 };
+      // Belekerül a számlaszám is a csoportosítás kulcsába, hogy ne vonja össze az eltérő számlákat
+      const key = b.type + '_' + b.size + '_' + p + '_' + b.receipt;
+      if(!map[key]) map[key] = { 'Típus': b.type, 'Méret': b.size, 'Számlaszám': b.receipt, 'Készlet (db)': 0, '_price': p };
       map[key]['Készlet (db)'] += b.qty;
-      map[key]['Összesen (EUR)'] = parseFloat((map[key]['Készlet (db)'] * p).toFixed(2));
     });
     
-    const rows = Object.values(map).sort((a,b)=>a['Típus'].localeCompare(b['Típus']));
+    const rows = Object.values(map).sort((a,b)=>a['Típus'].localeCompare(b['Típus'])).map(r => ({
+        'Típus': r['Típus'],
+        'Méret': r['Méret'],
+        'Számlaszám': r['Számlaszám'],
+        'Készlet (db)': r['Készlet (db)'],
+        'Egységár (EUR)': formatEuro(r['_price']),
+        'Összesen (EUR)': formatEuro(r['Készlet (db)'] * r['_price'])
+    }));
+
     if(!rows.length) return alert('Nincs leltározható készlet.');
     
     const ws = XLSX.utils.json_to_sheet(rows);
