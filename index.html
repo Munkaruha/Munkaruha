@@ -107,7 +107,7 @@
       <select id="income-type" style="min-width:140px"></select>
       <select id="income-size" style="min-width:90px"></select>
       <input id="income-qty" type="number" min="1" value="1" style="width:70px;" placeholder="Db">
-      <input id="income-price" type="number" min="0" style="width:100px;" placeholder="Ár (EUR/db)">
+      <input id="income-price" type="text" style="width:100px;" placeholder="Ár (EUR/db)">
       <button onclick="addIncome()">+ Hozzáad</button>
     </div>
     <h4>Aktuális készlet (Összesített)</h4>
@@ -326,7 +326,7 @@
 
   // LETÖLTÉS A FELHŐBŐL
   function loadDataFromGoogle() {
-    if (!GOOGLE_WEB_APP_URL || GOOGLE_WEB_APP_URL === 'IDE_MÁSOLD_BE_A_LINKET') return;
+    if (!GOOGLE_WEB_APP_URL || GOOGLE_WEB_APP_URL === 'IDE_MÁSOLD_BE_A_LINKET' || GOOGLE_WEB_APP_URL === '') return;
     
     const btn = document.getElementById('sync-indicator-btn');
     btn.innerText = "🔄 Letöltés...";
@@ -373,7 +373,7 @@
     const payload = { items, employees, movements, batches };
     localStorage.setItem('raktarData', JSON.stringify(payload));
     
-    if (GOOGLE_WEB_APP_URL && GOOGLE_WEB_APP_URL !== 'IDE_MÁSOLD_BE_A_LINKET') {
+    if (GOOGLE_WEB_APP_URL && GOOGLE_WEB_APP_URL !== 'IDE_MÁSOLD_BE_A_LINKET' && GOOGLE_WEB_APP_URL !== '') {
       fetch(GOOGLE_WEB_APP_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -475,7 +475,11 @@
     const size = document.getElementById('income-size').value;
     const qty = parseInt(document.getElementById('income-qty').value) || 0;
     const receipt = document.getElementById('income-receipt').value.trim();
-    const price = parseFloat(document.getElementById('income-price').value) || 0;
+    
+    // Tizedesvessző kicserélése pontra, hogy a parseFloat jól működjön
+    let priceStr = document.getElementById('income-price').value.trim();
+    priceStr = priceStr.replace(',', '.');
+    const price = parseFloat(priceStr) || 0;
     
     if (!type || !size || qty <= 0) return alert('Tölts ki minden mezőt!');
     if (!receipt) return alert('Kérlek add meg a Számla számát!');
@@ -546,7 +550,10 @@
 
   window.updateBatchPrice = function(batchId, val) {
     const b = batches.find(x => x.id === batchId);
-    if (b) { b.price = parseFloat(val) || 0; autoSaveData(); }
+    if (b) { 
+      b.price = parseFloat(val.toString().replace(',', '.')) || 0; 
+      autoSaveData(); 
+    }
   }
 
   function renderReceipts() {
@@ -657,7 +664,18 @@
   function exportInventory() {
     const rows = lastRendered['inventory-table'];
     if(!rows.length) return alert('Nincs adat');
-    const ws = XLSX.utils.json_to_sheet(rows.map(r=>({ 'Típus':r.type, 'Méret':r.size, 'Készlet':r.qty })));
+    const ws = XLSX.utils.json_to_sheet(rows.map(r=>{
+        const itemBatches = batches.filter(b => b.type === r.type && b.size === r.size && b.qty > 0).sort((a,b) => new Date(b.date) - new Date(a.date));
+        const lastPrice = itemBatches.length > 0 ? (itemBatches[0].price || 0) : 0;
+        
+        return { 
+            'Típus': r.type, 
+            'Méret': r.size, 
+            'Készlet (db)': r.qty,
+            'Utolsó Egységár (EUR)': lastPrice,
+            'Összesen (EUR)': parseFloat((r.qty * lastPrice).toFixed(2))
+        };
+    }));
     const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Készlet"); XLSX.writeFile(wb, "Keszlet.xlsx");
   }
 
@@ -667,8 +685,9 @@
       if(b.qty <= 0) return; 
       const p = b.price || 0;
       const key = b.type + '_' + b.size + '_' + p;
-      if(!map[key]) map[key] = { 'Típus': b.type, 'Méret': b.size, 'Ár (EUR/db)': p, 'Készlet (db)': 0 };
+      if(!map[key]) map[key] = { 'Típus': b.type, 'Méret': b.size, 'Készlet (db)': 0, 'Egységár (EUR)': p, 'Összesen (EUR)': 0 };
       map[key]['Készlet (db)'] += b.qty;
+      map[key]['Összesen (EUR)'] = parseFloat((map[key]['Készlet (db)'] * p).toFixed(2));
     });
     
     const rows = Object.values(map).sort((a,b)=>a['Típus'].localeCompare(b['Típus']));
@@ -725,7 +744,7 @@
           <p>Schedl Hungária Kft.<br>4002 Debrecen Csonka János utca 7.</p>
         </div>
         <div>
-          <img src="https://mabri.vision/wp-content/uploads/2023/08/Logo-Schedl.png" alt="Schedl Logo" style="height: 65px; object-fit: contain;">
+          <img src="https://mabri.vision/wp-content/uploads/2023/08/Logo-Schedl.png" alt="Schedl Logo" style="height: 65px; width: auto; max-width: 200px; display: block!important;">
         </div>
       </div>
       <div class="print-meta">
